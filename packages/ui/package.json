@@ -3,7 +3,8 @@
   "version": "0.0.0",
   "private": true,
   "exports": {
-    "./*": "./src/*.tsx"
+    "./*": "./src/*.tsx",
+    ".": "./src/index.ts"
   },
   "scripts": {
     "lint": "eslint . --max-warnings 0",
@@ -20,7 +21,10 @@
     "typescript": "5.9.2"
   },
   "dependencies": {
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "@repo/ui-config": "*",
+    "@tamagui/lucide-icons": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "tamagui": "catalog:"
   }
 }

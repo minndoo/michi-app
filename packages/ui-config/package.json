@@ -1,0 +1,12 @@
+{
+    "name": "@repo/ui-config",
+    "version": "0.0.0",
+    "private": true,
+    "main": "index.ts",
+    "types": "index.ts",
+    "sideEffects": false,
+    "dependencies": {
+        "@tamagui/config": "^2.0.0-rc.0",
+        "tamagui": "catalog:"
+    }
+}
