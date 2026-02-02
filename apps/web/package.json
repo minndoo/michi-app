@@ -11,6 +11,7 @@
     "check-types": "next typegen && tsc --noEmit"
   },
   "dependencies": {
+    "@auth0/nextjs-auth0": "^4.14.1",
     "@repo/ui": "*",
     "@repo/ui-config": "*",
     "@tamagui/react-native-svg": "^2.0.0-rc.0",
