@@ -7,5 +7,6 @@ if (!process.env.AUTH0_AUDIENCE) {
 export const auth0 = new Auth0Client({
   authorizationParameters: {
     audience: process.env.AUTH0_AUDIENCE,
+    scope: "openid profile email offline_access",
   },
 });

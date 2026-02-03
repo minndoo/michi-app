@@ -1,8 +1,17 @@
 import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import { auth0 } from "./lib/auth0";
 
 export async function middleware(request: NextRequest) {
-  return await auth0.middleware(request);
+  const pathname = request.nextUrl.pathname;
+
+  const response = await auth0.middleware(request);
+
+  // Add the current pathname to headers so we can access it in layouts
+  const newResponse = response || NextResponse.next();
+  newResponse.headers.set("x-pathname", pathname);
+
+  return newResponse;
 }
 
 export const config = {

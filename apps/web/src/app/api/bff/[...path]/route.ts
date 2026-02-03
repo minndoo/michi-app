@@ -44,30 +44,14 @@ async function handleRequest(
   method: string,
 ) {
   try {
-    // Get the access token from the session
-    const session = await auth0.getSession();
-
-    if (!session) {
-      return NextResponse.json(
-        {
-          error: "Unauthorized",
-          message: "No active session. Please login first.",
-        },
-        { status: 401 },
-      );
-    }
-
-    const accessToken = session.tokenSet.accessToken;
+    const accessToken = await auth0.getAccessToken();
 
     if (!accessToken) {
-      return NextResponse.json(
-        {
-          error: "Unauthorized",
-          message:
-            "No access token available. You may need to login again or ensure AUTH0_AUDIENCE is configured correctly.",
-        },
-        { status: 401 },
-      );
+      // Get the current URL to redirect back after login
+      const currentUrl = request.nextUrl.pathname + request.nextUrl.search;
+      const loginUrl = `/auth/login?returnTo=${encodeURIComponent(currentUrl)}`;
+
+      return NextResponse.redirect(new URL(loginUrl, request.url));
     }
 
     // Build the target URL
@@ -82,7 +66,7 @@ async function handleRequest(
     const response = await fetch(targetUrl, {
       method,
       headers: {
-        Authorization: `Bearer ${accessToken}`,
+        Authorization: `Bearer ${accessToken.token}`,
         "Content-Type":
           request.headers.get("content-type") || "application/json",
       },
