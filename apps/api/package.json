@@ -2,27 +2,36 @@
   "name": "api",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
+    "db:dev": "prisma dev",
     "build": "tsc",
     "start": "node dist/index.js",
     "lint": "eslint --max-warnings 0",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "tools": "tsx prisma.config.ts"
   },
   "dependencies": {
-    "express": "^4.21.2",
+    "@prisma/adapter-pg": "^7.3.0",
+    "@prisma/client": "^7.3.0",
     "cors": "^2.8.5",
-    "dotenv": "^16.4.7",
-    "express-oauth2-jwt-bearer": "^1.7.0"
+    "dotenv": "^17.2.3",
+    "express": "^4.21.2",
+    "express-oauth2-jwt-bearer": "^1.7.0",
+    "install": "^0.13.0",
+    "pg": "^8.18.0"
   },
   "devDependencies": {
     "@repo/eslint-config": "*",
     "@repo/typescript-config": "*",
-    "@types/express": "^5.0.0",
     "@types/cors": "^2.8.17",
-    "@types/node": "^22.15.3",
-    "tsx": "^4.19.2",
+    "@types/express": "^5.0.0",
+    "@types/node": "^25.2.0",
+    "@types/pg": "^8.16.0",
     "eslint": "^9.39.1",
+    "prisma": "^7.3.0",
+    "tsx": "^4.19.2",
     "typescript": "5.9.2"
   }
 }

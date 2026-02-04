@@ -1,10 +1,10 @@
 import express, { type Request, type Response } from "express";
-import * as corsModule from "cors";
-import * as dotenvModule from "dotenv";
+import cors from "cors";
+import dotenv from "dotenv";
 import { checkJwt } from "./middleware/auth";
 
 // Load environment variables
-dotenvModule.config();
+dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -15,7 +15,7 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",")
   .filter((origin) => origin.length > 0);
 
 app.use(
-  corsModule.default({
+  cors({
     origin:
       allowedOrigins && allowedOrigins.length > 0
         ? allowedOrigins
