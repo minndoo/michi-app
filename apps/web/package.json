@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --port 3000",
-    "build": "next build",
+    "build": "tamagui build --target web ./src -- next build",
     "start": "next start",
     "lint": "eslint --max-warnings 0",
     "check-types": "next typegen && tsc --noEmit"
@@ -14,7 +14,7 @@
     "@auth0/nextjs-auth0": "^4.14.1",
     "@repo/ui": "*",
     "@repo/ui-config": "*",
-    "@tamagui/react-native-svg": "^2.0.0-rc.0",
+    "@tamagui/react-native-svg": "catalog:",
     "next": "16.1.0",
     "react": "catalog:",
     "react-dom": "catalog:",
@@ -25,6 +25,7 @@
     "@repo/eslint-config": "*",
     "@repo/typescript-config": "*",
     "@tamagui/cli": "catalog:",
+    "@tamagui/core": "^2.0.0-rc.0",
     "@types/node": "^22.15.3",
     "@types/react": "19.2.2",
     "@types/react-dom": "19.2.2",
