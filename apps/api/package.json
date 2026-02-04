@@ -5,8 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "db:dev": "prisma dev",
     "build": "tsc",
+    "db:deploy": "prisma migrate deploy && prisma generate",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:studio": "prisma studio",
     "start": "node dist/index.js",
     "lint": "eslint --max-warnings 0",
     "check-types": "tsc --noEmit",
@@ -17,9 +20,8 @@
     "@prisma/client": "^7.3.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
-    "express": "^4.21.2",
+    "express": "5",
     "express-oauth2-jwt-bearer": "^1.7.0",
-    "install": "^0.13.0",
     "pg": "^8.18.0"
   },
   "devDependencies": {

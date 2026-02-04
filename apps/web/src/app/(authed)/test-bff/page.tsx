@@ -14,11 +14,9 @@ export default function TestBFFPage() {
     // Check session on mount
     fetch("/api/bff/me")
       .then((res) => {
-        console.log("res", res);
         return res.json();
       })
       .then((data) => {
-        console.log("sessionInfo", data);
         setSessionInfo(data);
       })
       .catch((err) => setError(err.message));

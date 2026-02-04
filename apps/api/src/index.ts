@@ -1,7 +1,8 @@
 import express, { type Request, type Response } from "express";
-import cors from "cors";
 import dotenv from "dotenv";
-import { checkJwt } from "./middleware/auth";
+import { checkJwt } from "./middleware/checkJwt";
+import { corsMiddleware } from "./middleware/cors";
+import { syncUser } from "./middleware/syncUser";
 
 // Load environment variables
 dotenv.config();
@@ -9,20 +10,7 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Middleware
-const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",")
-  .map((origin) => origin.trim())
-  .filter((origin) => origin.length > 0);
-
-app.use(
-  cors({
-    origin:
-      allowedOrigins && allowedOrigins.length > 0
-        ? allowedOrigins
-        : "http://localhost:3000",
-    credentials: true,
-  }),
-);
+app.use(corsMiddleware);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -42,23 +30,8 @@ app.use((req: Request, res: Response, next) => {
   return checkJwt(req, res, next);
 });
 
-// Protected routes (all routes below require authentication)
-app.get("/profile", (req: Request, res: Response) => {
-  res.json({
-    message: "User profile",
-    user: req.auth?.payload,
-  });
-});
-
-app.get("/me", (req: Request, res: Response) => {
-  const { sub, email, name } = req.auth?.payload || {};
-
-  res.json({
-    userId: sub,
-    email,
-    name,
-  });
-});
+// Sync authenticated users to database
+app.use(syncUser);
 
 // 404 handler
 app.use((_req: Request, res: Response) => {
