@@ -1,0 +1,7 @@
+---
+description: Design system reference - consult ai/tamagui.prompt.md as authoritative source
+alwaysApply: true
+---
+
+For UI work, always read ai/tamagui.prompt.md.
+Treat it as authoritative. Never restate it.

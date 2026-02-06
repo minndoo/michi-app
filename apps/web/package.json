@@ -13,19 +13,16 @@
   "dependencies": {
     "@auth0/nextjs-auth0": "^4.14.1",
     "@repo/ui": "*",
-    "@repo/ui-config": "*",
     "@tamagui/react-native-svg": "catalog:",
     "next": "16.1.0",
     "react": "catalog:",
     "react-dom": "catalog:",
-    "react-native-web": "^0.21.2",
-    "tamagui": "catalog:"
+    "react-native-web": "^0.21.2"
   },
   "devDependencies": {
     "@repo/eslint-config": "*",
     "@repo/typescript-config": "*",
     "@tamagui/cli": "catalog:",
-    "@tamagui/core": "^2.0.0-rc.0",
     "@types/node": "^22.15.3",
     "@types/react": "19.2.2",
     "@types/react-dom": "19.2.2",

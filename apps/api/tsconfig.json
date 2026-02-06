@@ -1,15 +1,9 @@
 {
+  "extends": "@repo/typescript-config/node-server.json",
   "compilerOptions": {
-    "outDir": "dist",
     "rootDir": "src",
-    "esModuleInterop": true,
+    "outDir": "dist",
     "baseUrl": ".",
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
-    "target": "ES2023",
-    "strict": true,
-    "sourceMap": true,
-    "types": ["node"]
   },
   "references": [{ "path": "./tsconfig.tools.json" }],
   "include": ["src/**/*.ts"],

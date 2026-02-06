@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
+import { Button } from "@repo/ui";
+import { ArrowRight } from "@repo/ui/icons";
 
 export default function DashboardPage() {
   useEffect(() => {
@@ -13,5 +15,12 @@ export default function DashboardPage() {
       });
   }, []);
 
-  return <div>Dashboard</div>;
+  return (
+    <div>
+      Dashboard
+      <Button icon={ArrowRight} iconAfter={ArrowRight}>
+        Haha
+      </Button>
+    </div>
+  );
 }

@@ -25,10 +25,11 @@
     "catalog": {
       "react": "^19.2.0",
       "react-dom": "^19.2.0",
-      "tamagui": "^2.0.0-rc.0",
-      "@tamagui/cli": "^2.0.0-rc.0",
-      "@tamagui/lucide-icons": "^2.0.0-rc.0",
-      "@tamagui/react-native-svg": "^2.0.0-rc.0",
+      "tamagui": "2.0.0-rc.0",
+      "@tamagui/cli": "2.0.0-rc.0",
+      "@tamagui/lucide-icons": "2.0.0-rc.0",
+      "@tamagui/react-native-svg": "2.0.0-rc.0",
+      "@tamagui/config": "2.0.0-rc.0",
       "react-native-svg": "^15.15.1"
     }
   }

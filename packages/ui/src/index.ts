@@ -1,5 +1,8 @@
-// Export all components
-export * from "./TamaGuiButton";
-export * from "./button";
-export * from "./card";
-export * from "./code";
+// baseline components: all from tamagui
+export * from "tamagui";
+
+// overrides for baseline components with our own wrappers
+export { XStack, YStack, type XStackProps, type YStackProps } from "./Stack";
+
+// custom components
+export { UIProvider } from "./UIProvider";

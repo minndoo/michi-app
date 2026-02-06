@@ -1,5 +1,10 @@
 {
   "extends": "@repo/typescript-config/react-library.json",
+  "compilerOptions": {
+    // Disable declaration generation - not needed for source exports in monorepo
+    "declaration": false,
+    "declarationMap": false
+  },
   "include": ["src"],
   "exclude": ["node_modules", "dist"]
 }

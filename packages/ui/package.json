@@ -3,8 +3,9 @@
   "version": "0.0.0",
   "private": true,
   "exports": {
-    "./*": "./src/*.tsx",
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./icons": "./src/icons.ts",
+    "./config": "./tamagui.config.ts"
   },
   "scripts": {
     "lint": "eslint . --max-warnings 0",
@@ -21,10 +22,10 @@
     "typescript": "5.9.2"
   },
   "dependencies": {
-    "@repo/ui-config": "*",
     "@tamagui/lucide-icons": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
-    "tamagui": "catalog:"
+    "tamagui": "catalog:",
+    "@tamagui/config": "catalog:"
   }
 }
