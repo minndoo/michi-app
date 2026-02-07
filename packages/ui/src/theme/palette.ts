@@ -1,0 +1,29 @@
+export const paletteLight = {
+  color1: "#F6F8F7",
+  color2: "#FFFFFF",
+  color3: "#F1F5F3",
+  color4: "#EEF3F0",
+  color5: "#E3ECE7",
+  color6: "#D1DED7",
+  color7: "#B7C9C1",
+  color8: "#8A9A95",
+  color9: "#6FA58C",
+  color10: "#5C927A",
+  color11: "#1F2D2A",
+  color12: "#0E1513",
+} as const;
+
+export const paletteDark = {
+  color1: "#0F1715",
+  color2: "#1A2422",
+  color3: "#1F2D2A",
+  color4: "#243532",
+  color5: "#2B403B",
+  color6: "#344C47",
+  color7: "#44635C",
+  color8: "#9FB6AE",
+  color9: "#7FBFA5",
+  color10: "#6DAE96",
+  color11: "#E7EFEA",
+  color12: "#FFFFFF",
+} as const;

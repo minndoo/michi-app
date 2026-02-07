@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 /** @type {import('next').NextConfig} */
 const nextConfig: NextConfig = {
-  transpilePackages: ["@repo/ui", "@repou/ui/icons"],
+  transpilePackages: ["@repo/ui", "@repo/ui/icons"],
   turbopack: {
     resolveAlias: {
       "react-native": "react-native-web",

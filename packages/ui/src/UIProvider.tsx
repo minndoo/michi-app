@@ -1,12 +1,14 @@
 "use client";
 
-import React from "react";
-import { TamaguiProvider as TamaguiProviderBase } from "tamagui";
+import {
+  TamaguiProvider as TamaguiProviderBase,
+  type TamaguiProviderProps,
+} from "tamagui";
 import tamaguiConfig from "../tamagui.config";
 
-export const UIProvider = ({ children }: React.PropsWithChildren) => {
+export const UIProvider = ({ children, ...props }: TamaguiProviderProps) => {
   return (
-    <TamaguiProviderBase defaultTheme="light" config={tamaguiConfig}>
+    <TamaguiProviderBase config={tamaguiConfig} {...props}>
       {children}
     </TamaguiProviderBase>
   );

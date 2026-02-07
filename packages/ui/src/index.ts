@@ -5,4 +5,4 @@ export * from "tamagui";
 export { XStack, YStack, type XStackProps, type YStackProps } from "./Stack";
 
 // custom components
-export { UIProvider } from "./UIProvider";
+export * from "./UIProvider";

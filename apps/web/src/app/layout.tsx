@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { UIProvider } from "@/providers/UIProvider";
+import { NextTamaguiProvider } from "@/providers/NextTamaguiProvider";
 import AuthProvider from "@/providers/AuthProvider";
 
 export const metadata: Metadata = {
@@ -16,9 +16,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <UIProvider>
+        <NextTamaguiProvider>
           <AuthProvider>{children}</AuthProvider>
-        </UIProvider>
+        </NextTamaguiProvider>
       </body>
     </html>
   );

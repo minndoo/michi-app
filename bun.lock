@@ -41,6 +41,7 @@
       "dependencies": {
         "@auth0/nextjs-auth0": "^4.14.1",
         "@repo/ui": "*",
+        "@tamagui/next-theme": "catalog:",
         "@tamagui/react-native-svg": "catalog:",
         "next": "16.1.0",
         "react": "catalog:",
@@ -104,6 +105,7 @@
     "@tamagui/cli": "2.0.0-rc.0",
     "@tamagui/config": "2.0.0-rc.0",
     "@tamagui/lucide-icons": "2.0.0-rc.0",
+    "@tamagui/next-theme": "2.0.0-rc.0",
     "@tamagui/react-native-svg": "2.0.0-rc.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
@@ -710,6 +712,8 @@
     "@tamagui/lucide-icons": ["@tamagui/lucide-icons@2.0.0-rc.0", "", { "dependencies": { "@tamagui/core": "2.0.0-rc.0", "@tamagui/helpers-icon": "2.0.0-rc.0" }, "peerDependencies": { "react": "*", "react-native-svg": ">=12" } }, "sha512-rMQrJ3tdOXZvmxOaxezzPPIgBMKPDr+ZS6rv5Gp1Iqge2fR6nDXlLn540hyQ6QguwNxpzYebRBbodTzJYW4yYw=="],
 
     "@tamagui/native": ["@tamagui/native@2.0.0-rc.0", "", { "peerDependencies": { "react": "*", "react-native": "*", "react-native-gesture-handler": ">=2.0.0", "react-native-keyboard-controller": ">=1.0.0", "react-native-safe-area-context": ">=4.0.0", "react-native-teleport": ">=0.5.0", "react-native-worklets-core": ">=1.0.0" }, "optionalPeers": ["react-native-gesture-handler", "react-native-keyboard-controller", "react-native-safe-area-context", "react-native-teleport", "react-native-worklets-core"] }, "sha512-ShIQEUB2QII/QMz/cgJE4FviQBB3eA1CaF9J0fD09BREEqBIT7zwCLGMl9k3m8quYy8pslxDsIzbKg1iOwEXiQ=="],
+
+    "@tamagui/next-theme": ["@tamagui/next-theme@2.0.0-rc.0", "", { "dependencies": { "@tamagui/constants": "2.0.0-rc.0", "@tamagui/use-event": "2.0.0-rc.0" }, "peerDependencies": { "next": ">=14", "react": "*" } }, "sha512-2VR0f9y8tJuquTdhygkKZw/SvX1IrZJmAV2a6HRIXUwRxzAQQ+emN94QRSH69lKmvDwlVimnsWxQl4tvGH0bcA=="],
 
     "@tamagui/normalize-css-color": ["@tamagui/normalize-css-color@2.0.0-rc.0", "", { "dependencies": { "@react-native/normalize-color": "^2.1.0" } }, "sha512-uXoejbCJgGeNUSRQTsDzq7Q7Xuj76AHaOrCmbSSvXHeXlqScFfrHiyHgOQ6xAnXHpNWP2r/hniUPR+ysQzXSVA=="],
 
