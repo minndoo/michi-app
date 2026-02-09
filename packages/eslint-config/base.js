@@ -19,6 +19,19 @@ export const config = [
     },
     rules: {
       "turbo/no-undeclared-env-vars": "warn",
+      "no-unused-vars": ["error", {
+        args: "all",
+        argsIgnorePattern: "^_",
+        caughtErrors: "all",
+        destructuredArrayIgnorePattern: "^_",
+      }],
+      "no-unused-imports": ["error"],
+      "no-unused-expressions": ["warn", { allowShortCircuit: true, allowTernary: true }],
+      "no-unused-labels": ["warn"],
+      "no-unused-modules": ["warn"],
+      "no-unused-properties": ["warn"],
+      "no-unused-results": ["warn"],
+      "no-unused-returns": ["warn"],
     },
   },
   {

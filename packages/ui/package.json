@@ -22,10 +22,12 @@
     "typescript": "5.9.2"
   },
   "dependencies": {
-    "@tamagui/lucide-icons": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
     "tamagui": "catalog:",
-    "@tamagui/config": "catalog:"
+    "@tamagui/config": "catalog:",
+    "@tamagui/get-button-sized": "catalog:",
+    "@tamagui/lucide-icons": "catalog:",
+    "@tamagui/core": "catalog:"
   }
 }

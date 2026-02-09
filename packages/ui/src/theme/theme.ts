@@ -1,9 +1,4 @@
-import { TamaguiBaseTheme } from "tamagui";
 import { paletteLight, paletteDark } from "./palette";
-
-type Theme = TamaguiBaseTheme & {
-  backgroundStrong: string;
-};
 
 export const lightTheme = {
   // Surfaces
@@ -17,6 +12,12 @@ export const lightTheme = {
   backgroundSoft: paletteLight.color3,
   backgroundSoftHover: paletteLight.color4,
   backgroundSoftPress: paletteLight.color5,
+
+  // "Hard" surfaces (optional but super useful)
+  backgroundHard: paletteLight.color9,
+  backgroundHardHover: paletteLight.color10,
+  backgroundHardPress: paletteLight.color8,
+  backgroundHardFocus: paletteLight.color8,
 
   // Text
   color: paletteLight.color11, // primary text
@@ -44,7 +45,7 @@ export const lightTheme = {
   shadowColorHover: paletteLight.color12,
   shadowColorPress: paletteLight.color12,
   shadowColorFocus: paletteLight.color12,
-} as Theme;
+};
 
 export const darkTheme = {
   // Surfaces
@@ -58,6 +59,12 @@ export const darkTheme = {
   backgroundSoft: paletteDark.color2,
   backgroundSoftHover: paletteDark.color3,
   backgroundSoftPress: paletteDark.color4,
+
+  // "Hard" surfaces (optional but super useful)
+  backgroundHard: paletteLight.color9,
+  backgroundHardHover: paletteLight.color10,
+  backgroundHardPress: paletteLight.color8,
+  backgroundHardFocus: paletteLight.color8,
 
   // Text
   color: paletteDark.color11, // primary text (light)
@@ -85,4 +92,4 @@ export const darkTheme = {
   shadowColorHover: paletteDark.color1,
   shadowColorPress: paletteDark.color1,
   shadowColorFocus: paletteDark.color1,
-} as Theme;
+};
