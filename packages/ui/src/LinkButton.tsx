@@ -136,7 +136,6 @@ const LinkButtonFrame = styled(View, {
     disabled: {
       true: {
         pointerEvents: "none",
-        // @ts-ignore
         "aria-disabled": true,
       },
     },

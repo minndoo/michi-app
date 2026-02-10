@@ -6,7 +6,14 @@
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "outputs": [".next/**", "!.next/cache/**", "dist/**"],
-      "env": ["API_BASE_URL", "AUTH0_AUDIENCE"]
+      "env": [
+        "API_BASE_URL",
+        "AUTH0_AUDIENCE",
+        "DATABASE_URL",
+        "PORT",
+        "AUTH0_DOMAIN",
+        "ALLOWED_ORIGINS"
+      ]
     },
     "lint": {
       "dependsOn": ["^lint"]

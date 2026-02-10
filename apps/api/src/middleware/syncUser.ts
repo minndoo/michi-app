@@ -9,7 +9,7 @@ const USERNAME_CLAIM_NAMESPACE = "https://michiapp.com/name";
  */
 export const syncUser = async (
   req: Request,
-  res: Response,
+  _res: Response,
   next: NextFunction,
 ) => {
   try {
@@ -41,7 +41,7 @@ export const syncUser = async (
     }
 
     // Attach database user to request for downstream use
-    (req as any).user = user;
+    (req as Request & { user: typeof user }).user = user;
 
     next();
   } catch (error) {

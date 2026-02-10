@@ -1,4 +1,8 @@
-import express, { type Request, type Response } from "express";
+import express, {
+  type NextFunction,
+  type Request,
+  type Response,
+} from "express";
 import dotenv from "dotenv";
 import { checkJwt } from "./middleware/checkJwt";
 import { corsMiddleware } from "./middleware/cors";
@@ -42,17 +46,19 @@ app.use((_req: Request, res: Response) => {
 });
 
 // Error handling middleware (must be last)
-app.use((err: Error, _req: Request, res: Response, _next: any) => {
-  console.error("Error:", err);
+type ErrorWithStatus = Error & { status?: number };
 
-  const status = (err as any).status || 500;
-  const message = err.message || "Internal Server Error";
+app.use(
+  (err: ErrorWithStatus, _req: Request, res: Response, _next: NextFunction) => {
+    const status = err.status ?? 500;
+    const message = err.message ?? "Internal Server Error";
 
-  res.status(status).json({
-    error: err.name || "Error",
-    message,
-  });
-});
+    res.status(status).json({
+      error: err.name ?? "Error",
+      message,
+    });
+  },
+);
 
 // Start server
 app.listen(PORT, () => {
