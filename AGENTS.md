@@ -19,6 +19,7 @@ Examples:
 ❌ <YStack outline="2px solid $backgroundColor" />
 
 # Breakpoints rules
+
 - Always design or create for mobile-first approach and then scaleup to tablet and then desktop
 - When scaling up, always use min media queries
 - Scales are as follow (described with Tamagui breakpoint tokens)
@@ -28,6 +29,21 @@ Desktop: $xl
 
 Examples:
 <View gap="$1.5" $md={{ gap: "$2" }} $xl={{ gap: "$3" }} />
+
+# Tokens rules
+
+- Always prefix a token usage with a proper usage if possible
+- Only use non prefixed values if you can't determine what prefix fits into the usage
+Examples:
+✅ <View rounded="$radius.1" />
+✅ <View z="$zIndex.1" />
+✅ <View px="$space.1" mx="$space.1" />
+✅ <Text fontSize="$size.1" />
+
+❌ <View rounded="$1" />
+❌ <View z="$1" />
+❌ <View px="$1" mx="$1" />
+❌ <Text fontSize="$1" />
 
 # Component rules
 

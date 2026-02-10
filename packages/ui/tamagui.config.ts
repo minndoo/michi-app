@@ -1,27 +1,18 @@
 import { createTamagui } from "tamagui";
 import { defaultConfig } from "@tamagui/config/v5";
-import { darkTheme, lightTheme } from "./src/theme/theme";
-import { fonts } from "./src/fonts";
+import { themes } from "./src/theme/theme";
+import { fonts } from "./src/theme/fonts";
+import { tokens } from "./src/theme/tokens";
 
 const config = createTamagui({
   ...defaultConfig,
-  themes: {
-    ...defaultConfig.themes,
-    dark: {
-      ...defaultConfig.themes.dark,
-      ...darkTheme,
-    },
-    light: {
-      ...defaultConfig.themes.light,
-      ...lightTheme,
-    },
-  },
   settings: {
     ...defaultConfig.settings,
-    shouldAddPrefersColorThemes: false,
     disableRootThemeClass: true,
   },
+  themes,
   fonts,
+  tokens,
 });
 
 export type TamaguiConfig = typeof config;

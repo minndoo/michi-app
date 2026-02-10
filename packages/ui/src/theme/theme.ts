@@ -1,6 +1,7 @@
 import { paletteLight, paletteDark } from "./palette";
+import { defaultConfig } from "@tamagui/config/v5";
 
-export const lightTheme = {
+const lightTheme = {
   // Surfaces
   background: paletteLight.color1, // app/page background (soft)
   backgroundHover: paletteLight.color3,
@@ -47,7 +48,7 @@ export const lightTheme = {
   shadowColorFocus: paletteLight.color12,
 };
 
-export const darkTheme = {
+const darkTheme = {
   // Surfaces
   background: paletteDark.color1, // app/page background
   backgroundHover: paletteDark.color2,
@@ -92,4 +93,16 @@ export const darkTheme = {
   shadowColorHover: paletteDark.color1,
   shadowColorPress: paletteDark.color1,
   shadowColorFocus: paletteDark.color1,
+};
+
+export const themes = {
+  ...defaultConfig.themes,
+  light: {
+    ...defaultConfig.themes.light,
+    ...lightTheme,
+  },
+  dark: {
+    ...defaultConfig.themes.dark,
+    ...darkTheme,
+  },
 };

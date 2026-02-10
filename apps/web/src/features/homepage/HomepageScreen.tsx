@@ -10,6 +10,7 @@ import {
   Leaf,
 } from "@repo/ui/icons";
 import { LinkButton } from "@/components/LinkButton";
+import { FloatingIconCard } from "./components/FloatingIconCard";
 import styles from "./animations.module.css";
 
 const Logo = () => (
@@ -24,42 +25,6 @@ const Logo = () => (
       Michi
     </Text>
   </XStack>
-);
-
-const FloatingIconCard = ({
-  children,
-  t,
-  l,
-  r,
-  className,
-}: {
-  children: React.ReactNode;
-  t: number;
-  l?: number;
-  r?: number;
-  className?: string;
-}) => (
-  <View
-    position="absolute"
-    t={t}
-    l={l}
-    r={r}
-    minW={84}
-    minH={84}
-    bg="$backgroundStrong"
-    rounded="$8"
-    borderWidth={1}
-    borderColor="$borderColor"
-    items="center"
-    justify="center"
-    shadowColor="$shadowColor"
-    shadowOpacity={0.08}
-    shadowRadius={10}
-    shadowOffset={{ width: 0, height: 3 }}
-    className={className}
-  >
-    {children}
-  </View>
 );
 
 export const HomepageScreen = () => {
