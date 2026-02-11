@@ -6,5 +6,6 @@ export const tokens = {
     sm: "640px",
     md: "768px",
     xl: "1280px",
+    bigDesktop: "1440px",
   },
 };

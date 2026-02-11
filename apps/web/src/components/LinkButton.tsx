@@ -19,7 +19,7 @@ export const LinkButton = ({
 }: LinkButtonProps) => {
   return (
     <Link href={href} {...linkProps}>
-      <LinkButtonBase.Frame {...buttonProps}>{children}</LinkButtonBase.Frame>
+      <LinkButtonBase {...buttonProps}>{children}</LinkButtonBase>
     </Link>
   );
 };

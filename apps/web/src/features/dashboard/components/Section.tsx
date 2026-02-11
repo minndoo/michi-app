@@ -1,16 +1,20 @@
 import type { ReactNode } from "react";
-import { Card, H2, Text, XStack, YStack } from "@repo/ui";
+import { Card, H3, Text, XStack, YStack } from "@repo/ui";
+import Link, { type LinkProps } from "next/link";
 
 type SectionProps = {
   title: string;
-  actionLabel?: string;
+  viewAllAction: {
+    href: LinkProps["href"];
+    actionLabel: string;
+  };
   children: ReactNode;
   contentGap?: "$1.5" | "$2" | "$3" | "$4";
 };
 
 export const Section = ({
   title,
-  actionLabel = "VIEW ALL",
+  viewAllAction,
   children,
   contentGap = "$3",
 }: SectionProps) => {
@@ -25,10 +29,12 @@ export const Section = ({
     >
       <Card.Header p="$0">
         <XStack justify="space-between" items="center" minW="100%">
-          <H2 color="$color" fontWeight="bold">
+          <H3 color="$color" fontWeight="bold">
             {title}
-          </H2>
-          <Text color="$outlineColor">{actionLabel}</Text>
+          </H3>
+          <Text color="$outlineColor" asChild>
+            <Link href={viewAllAction.href}>{viewAllAction.actionLabel}</Link>
+          </Text>
         </XStack>
       </Card.Header>
       <YStack gap={contentGap}>{children}</YStack>

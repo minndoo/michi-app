@@ -1,6 +1,4 @@
-import { Children, ComponentRef, ReactNode, forwardRef } from "react";
 import {
-  Anchor,
   GetProps,
   SizableText,
   styled,
@@ -151,34 +149,10 @@ export const LinkButtonText = styled(SizableText, {
   color: "$color",
 });
 
-type LinkButtonFrameProps = GetProps<typeof LinkButtonFrame>;
+export type LinkButtonProps = GetProps<typeof LinkButtonFrame>;
 
-export type LinkButtonProps = LinkButtonFrameProps & {
-  children?: ReactNode;
-};
+export type LinkButtonTextProps = GetProps<typeof LinkButtonText>;
 
-const LinkButtonComponent = forwardRef<
-  ComponentRef<typeof Anchor>,
-  LinkButtonProps
->(({ children, ...props }, ref) => {
-  const wrappedChildren = Children.map(children, (child) => {
-    if (typeof child === "string" || typeof child === "number") {
-      return <LinkButtonText>{child}</LinkButtonText>;
-    }
-
-    return child;
-  });
-
-  return (
-    <LinkButtonFrame ref={ref} {...props}>
-      {wrappedChildren}
-    </LinkButtonFrame>
-  );
-});
-
-LinkButtonComponent.displayName = "LinkButton";
-
-export const LinkButton = withStaticProperties(LinkButtonComponent, {
+export const LinkButton = withStaticProperties(LinkButtonFrame, {
   Text: LinkButtonText,
-  Frame: LinkButtonFrame,
 });
