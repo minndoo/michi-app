@@ -3,5 +3,5 @@
 import { UIProvider as UIProviderBase } from "@repo/ui";
 
 export const UIProvider = ({ children }: React.PropsWithChildren) => {
-  return <UIProviderBase>{children}</UIProviderBase>;
+  return <UIProviderBase defaultTheme="light">{children}</UIProviderBase>;
 };

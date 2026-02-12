@@ -21,12 +21,5 @@ npm-debug.log*
 .vscode
 .idea
 
-/prisma/generated/prisma
-
-/generated/prisma
-
-/src/generated/prisma
-
-/prisma/src/generated/prisma
-
-/src/generated/prisma
+/generated/**
+/src/generated/**

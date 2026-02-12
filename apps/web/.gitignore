@@ -19,8 +19,6 @@
 # misc
 .DS_Store
 *.pem
-.tamagui
-tamagui-prompt.md
 
 # debug
 npm-debug.log*
@@ -36,3 +34,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Tamagui
+/public/tamagui.generated.css
+.tamagui
+tamagui-prompt.md

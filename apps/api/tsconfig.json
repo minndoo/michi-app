@@ -4,6 +4,9 @@
     "rootDir": "src",
     "outDir": "dist",
     "baseUrl": ".",
+    "experimentalDecorators": true,
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext"
   },
   "references": [{ "path": "./tsconfig.tools.json" }],
   "include": ["src/**/*.ts"],

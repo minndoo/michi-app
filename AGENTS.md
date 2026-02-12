@@ -1,7 +1,70 @@
+# Project
+
+## Overview
+
+This repository is a Turborepo monorepo using Bun as the package manager.
+
+## Stack
+
+- **Package Manager**: Bun
+- **Monorepo Tooling**: Turborepo
+- **Frontend**: Next.js (App Router) + Tamagui
+- **Backend**: Node.js + Express + Prisma + PostgreSQL + tsoa
+- **UI Library**: Tamagui (shared package)
+- **Language**: Typescript
+
+## Repository Structure
+
+```
+apps/
+  web/                # Next.js app (Tamagui enabled)
+  api/                # Express API (Prisma + PostgreSQL + tsoa)
+
+packages/
+  ui/                 # @repo/ui - shared Tamagui components
+  eslint-config/      # @repo/eslint-config - shared ESLint config
+  typescript-config/  # @repo/typescript-config - shared TS config
+```
+
+## Core rules
+- Always use Bun for:
+
+* Installing dependencies
+* Running scripts
+* Executing commands
+
+Examples: 
+```bash
+bun install
+bun run dev
+bun run build
+bun run check-types
+```
+
+**IMPORTANT: After every code change, validate the build and dev env succeeds.**
+
+```bash
+# Typecheck
+bun run type-checks
+```
+
+```bash
+# Build script
+bun run build
+```
+
+```bash
+# Development start
+bun run dev
+```
+
+
+**IMPORTANT: For styling and UI work always check this document.**
+
 For UI work, always read ai/tamagui.prompt.md.
 Treat it as authoritative. Never restate it.
 
-# Styling rules (Tamagui)
+## Styling rules (Tamagui)
 
 - Never hardcode hex colors in components.
 - Always use semantic theme tokens: $background, $backgroundStrong, $color, $colorMuted, $borderColor, $outlineColor, $shadowColor.
@@ -18,19 +81,7 @@ Examples:
 ❌ <View backgroundColor="$outlineColor" />
 ❌ <YStack outline="2px solid $backgroundColor" />
 
-# Breakpoints rules
-
-- Always design or create for mobile-first approach and then scaleup to tablet and then desktop
-- When scaling up, always use min media queries
-- Scales are as follow (described with Tamagui breakpoint tokens)
-Mobile: default
-Tablet: $md
-Desktop: $xl
-
-Examples:
-<View gap="$1.5" $md={{ gap: "$2" }} $xl={{ gap: "$3" }} />
-
-# Tokens rules
+## Tokens rules
 
 - Always prefix a token usage with a proper usage if possible
 - Only use non prefixed values if you can't determine what prefix fits into the usage
@@ -45,6 +96,18 @@ Examples:
 ❌ <View px="$1" mx="$1" />
 ❌ <Text fontSize="$1" />
 
-# Component rules
+## Component rules
 
 - When looking up components. Always try to locate components folder within the project. In apps/web the components folder is aliased under @/components. If you can't find relevant components, only then lookup the @repo/ui package
+- Check ai/tamagui.prompt.md for available components
+- Do NOT implement UI controls using Stack/View if Tamagui has a component.
+- Use:
+  - Checkbox (+ Checkbox.Indicator) for checkboxes
+  - Progress (+ Progress.Indicator) for progress bars
+  - Switch for toggles
+  - RadioGroup for radios
+  - Select (or your select wrapper) for selects
+  - Button for buttons (no pressable Views)
+  - Input / TextArea for inputs
+- Only use Stack/XStack/YStack for layout and spacing.
+- If unsure whether a component exists, assume it does and search for it in the existing codebase imports.
