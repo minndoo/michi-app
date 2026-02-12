@@ -42,10 +42,11 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 if (swaggerSpec) {
-  app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-  app.get("/docs/swagger.json", (_req: Request, res: Response) => {
+  app.get("/swagger.json", (_req: Request, res: Response) => {
     res.json(swaggerSpec);
   });
+
+  app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 } else {
   console.warn("Swagger spec not found at startup. /docs is disabled.");
 }
@@ -60,7 +61,11 @@ app.get("/health", (_req: Request, res: Response) => {
 
 // Apply JWT authentication to all routes except /health
 app.use((req: Request, res: Response, next) => {
-  if (req.path === "/health" || req.path.startsWith("/docs")) {
+  if (
+    req.path === "/health" ||
+    req.path === "/swagger.json" ||
+    req.path.startsWith("/docs")
+  ) {
     return next();
   }
   return checkJwt(req, res, next);

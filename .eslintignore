@@ -1,0 +1,7 @@
+# Generated files
+
+**/generated/
+**/node_modules/
+**/dist/
+**/build/
+**/out/

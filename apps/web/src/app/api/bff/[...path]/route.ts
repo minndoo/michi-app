@@ -2,6 +2,54 @@ import { auth0 } from "@/lib/auth0";
 import { NextRequest, NextResponse } from "next/server";
 
 const API_BASE_URL = process.env.API_BASE_URL || "http://localhost:3001";
+const BODY_METHODS = new Set(["POST", "PUT", "PATCH"]);
+
+type HandlerContext = {
+  request: NextRequest;
+  params: Promise<{ path: string[] }>;
+  method: string;
+  targetUrl?: string;
+  body?: BodyInit;
+  headers: Headers;
+};
+
+type MiddlewareResult = HandlerContext | NextResponse;
+type HandlerMiddleware = (context: HandlerContext) => Promise<MiddlewareResult>;
+
+const getReturnToPath = (request: NextRequest) => {
+  const referer = request.headers.get("referer");
+
+  if (!referer) {
+    return "/dashboard";
+  }
+
+  try {
+    const refererUrl = new URL(referer);
+    const currentOrigin = request.nextUrl.origin;
+
+    if (refererUrl.origin !== currentOrigin) {
+      return "/dashboard";
+    }
+
+    return `${refererUrl.pathname}${refererUrl.search}`;
+  } catch {
+    return "/dashboard";
+  }
+};
+
+const createUnauthorizedResponse = (request: NextRequest, message: string) => {
+  const returnTo = getReturnToPath(request);
+  const loginUrl = `/auth/login?returnTo=${encodeURIComponent(returnTo)}`;
+
+  return NextResponse.json(
+    {
+      error: "Unauthorized",
+      message,
+      loginUrl,
+    },
+    { status: 401 },
+  );
+};
 
 export async function GET(
   request: NextRequest,
@@ -38,44 +86,127 @@ export async function DELETE(
   return handleRequest(request, params, "DELETE");
 }
 
+const withTargetUrl: HandlerMiddleware = async (context) => {
+  const { path } = await context.params;
+  const targetPath = path.join("/");
+  const searchParams = context.request.nextUrl.searchParams.toString();
+
+  return {
+    ...context,
+    targetUrl: `${API_BASE_URL}/${targetPath}${searchParams ? `?${searchParams}` : ""}`,
+  };
+};
+
+const withAuthorizationHeader: HandlerMiddleware = async (context) => {
+  try {
+    const accessToken = await auth0.getAccessToken();
+
+    if (!accessToken?.token) {
+      return createUnauthorizedResponse(
+        context.request,
+        "Authentication required.",
+      );
+    }
+
+    const headers = new Headers(context.headers);
+    headers.set("authorization", `Bearer ${accessToken.token}`);
+
+    return {
+      ...context,
+      headers,
+    };
+  } catch (error) {
+    return createUnauthorizedResponse(
+      context.request,
+      error instanceof Error ? error.message : "Authentication required.",
+    );
+  }
+};
+
+const withForwardedHeaders: HandlerMiddleware = async (context) => {
+  const headers = new Headers(context.headers);
+  const contentType = context.request.headers.get("content-type");
+  const accept = context.request.headers.get("accept");
+
+  if (contentType) {
+    headers.set("content-type", contentType);
+  }
+
+  if (accept) {
+    headers.set("accept", accept);
+  }
+
+  return {
+    ...context,
+    headers,
+  };
+};
+
+const withRequestBody: HandlerMiddleware = async (context) => {
+  if (!BODY_METHODS.has(context.method)) {
+    return context;
+  }
+
+  if (!context.request.body) {
+    return context;
+  }
+
+  return {
+    ...context,
+    body: await context.request.arrayBuffer(),
+  };
+};
+
+const middlewares: HandlerMiddleware[] = [
+  withTargetUrl,
+  withAuthorizationHeader,
+  withForwardedHeaders,
+  withRequestBody,
+];
+
+async function runMiddlewares(initialContext: HandlerContext) {
+  let context = initialContext;
+
+  for (const middleware of middlewares) {
+    const result = await middleware(context);
+
+    if (result instanceof NextResponse) {
+      return result;
+    }
+
+    context = result;
+  }
+
+  return context;
+}
+
 async function handleRequest(
   request: NextRequest,
   params: Promise<{ path: string[] }>,
   method: string,
 ) {
   try {
-    const accessToken = await auth0.getAccessToken();
-
-    if (!accessToken) {
-      // Get the current URL to redirect back after login
-      const currentUrl = request.nextUrl.pathname + request.nextUrl.search;
-      const loginUrl = `/auth/login?returnTo=${encodeURIComponent(currentUrl)}`;
-
-      return NextResponse.redirect(new URL(loginUrl, request.url));
-    }
-
-    // Build the target URL
-    const { path } = await params;
-    const targetPath = path.join("/");
-    const searchParams = request.nextUrl.searchParams.toString();
-    const targetUrl = `${API_BASE_URL}/${targetPath}${
-      searchParams ? `?${searchParams}` : ""
-    }`;
-
-    // Forward the request to the backend API
-    const response = await fetch(targetUrl, {
+    const result = await runMiddlewares({
+      request,
+      params,
       method,
-      headers: {
-        Authorization: `Bearer ${accessToken.token}`,
-        "Content-Type":
-          request.headers.get("content-type") || "application/json",
-      },
-      body: ["POST", "PUT", "PATCH"].includes(method)
-        ? await request.text()
-        : undefined,
+      headers: new Headers(),
     });
 
-    // Return the response as-is (true transparent proxy)
+    if (result instanceof NextResponse) {
+      return result;
+    }
+
+    if (!result.targetUrl) {
+      throw new Error("Target URL is missing");
+    }
+
+    const response = await fetch(result.targetUrl, {
+      method,
+      headers: result.headers,
+      body: result.body,
+    });
+
     return new NextResponse(response.body, {
       status: response.status,
       statusText: response.statusText,

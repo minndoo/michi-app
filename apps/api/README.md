@@ -30,6 +30,11 @@ bun dev
 
 The server will start on `http://localhost:3001` by default.
 
+OpenAPI spec endpoints:
+
+- `http://localhost:3001/swagger.json` (raw JSON for codegen)
+- `http://localhost:3001/docs` (Swagger UI)
+
 ## Available Scripts
 
 - `bun dev` - Start development server with hot reload

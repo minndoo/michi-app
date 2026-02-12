@@ -12,7 +12,8 @@
         "DATABASE_URL",
         "PORT",
         "AUTH0_DOMAIN",
-        "ALLOWED_ORIGINS"
+        "ALLOWED_ORIGINS",
+        "ORVAL_INPUT"
       ]
     },
     "lint": {

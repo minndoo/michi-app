@@ -5,16 +5,20 @@
   "private": true,
   "scripts": {
     "dev": "next dev --port 3000",
-    "build": "tamagui build --target web ./src -- next build",
+    "build": "bun run prepare && tamagui build --target web ./src -- next build",
     "start": "next start",
     "lint": "eslint --max-warnings 0",
-    "check-types": "next typegen && tsc --noEmit"
+    "check-types": "bun run prepare && next typegen && tsc --noEmit",
+    "prepare": "bun run orval:generate",
+    "orval:generate": "orval --config orval.config.ts",
+    "orval:watch": "orval --config orval.config.ts --watch"
   },
   "dependencies": {
-    "@tamagui/next-theme": "catalog:",
     "@auth0/nextjs-auth0": "^4.14.1",
     "@repo/ui": "*",
+    "@tamagui/next-theme": "catalog:",
     "@tamagui/react-native-svg": "catalog:",
+    "@tanstack/react-query": "^5.90.21",
     "next": "16.1.0",
     "react": "catalog:",
     "react-dom": "catalog:",
@@ -29,6 +33,7 @@
     "@types/react": "19.2.2",
     "@types/react-dom": "19.2.2",
     "eslint": "^9.39.1",
+    "orval": "^8.3.0",
     "typescript": "5.9.2"
   }
 }

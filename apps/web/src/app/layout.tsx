@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { NextTamaguiProvider } from "@/providers/NextTamaguiProvider";
 import AuthProvider from "@/providers/AuthProvider";
+import { ReactQueryProvider } from "@/providers/ReactQueryProvider";
 
 import "./globals.css";
 
@@ -24,7 +25,9 @@ export default function RootLayout({
     <html lang="en" className={inter.className}>
       <body>
         <NextTamaguiProvider>
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider>
+            <ReactQueryProvider>{children}</ReactQueryProvider>
+          </AuthProvider>
         </NextTamaguiProvider>
       </body>
     </html>

@@ -3,4 +3,7 @@ AGENTS.md
 ai/**
 .tamagui
 .tamagui/**
+**/.tamagui/
 /dist/**
+**/dist/
+**/generated/
