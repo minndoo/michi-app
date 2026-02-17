@@ -32,9 +32,9 @@ export const Section = ({
           <H3 color="$color" fontWeight="bold">
             {title}
           </H3>
-          <Text color="$outlineColor" asChild>
-            <Link href={viewAllAction.href}>{viewAllAction.actionLabel}</Link>
-          </Text>
+          <Link href={viewAllAction.href}>
+            <Text color="$outlineColor">{viewAllAction.actionLabel}</Text>
+          </Link>
         </XStack>
       </Card.Header>
       <YStack gap={contentGap}>{children}</YStack>

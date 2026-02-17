@@ -29,6 +29,9 @@ const lightTheme = {
   colorSubtle: paletteLight.color8,
   colorDisabled: paletteLight.color8,
 
+  // Secondary text
+  colorHard: paletteLight.color9,
+
   // Borders / separators
   borderColor: paletteLight.color6,
   borderColorHover: paletteLight.color7,
@@ -46,6 +49,12 @@ const lightTheme = {
   shadowColorHover: paletteLight.color12,
   shadowColorPress: paletteLight.color12,
   shadowColorFocus: paletteLight.color12,
+
+  // Error states
+  colorDanger: paletteLight.color13,
+  borderColorDanger: paletteLight.color14,
+  backgroundDanger: paletteLight.color15,
+  focusDanger: paletteLight.color16,
 };
 
 const darkTheme = {
@@ -62,10 +71,10 @@ const darkTheme = {
   backgroundSoftPress: paletteDark.color4,
 
   // "Hard" surfaces (optional but super useful)
-  backgroundHard: paletteLight.color9,
-  backgroundHardHover: paletteLight.color10,
-  backgroundHardPress: paletteLight.color8,
-  backgroundHardFocus: paletteLight.color8,
+  backgroundHard: paletteDark.color9,
+  backgroundHardHover: paletteDark.color10,
+  backgroundHardPress: paletteDark.color8,
+  backgroundHardFocus: paletteDark.color8,
 
   // Text
   color: paletteDark.color11, // primary text (light)
@@ -75,6 +84,9 @@ const darkTheme = {
   colorMuted: paletteDark.color8, // muted text (your paletteDark has a nice gray-green here)
   colorSubtle: paletteDark.color8,
   colorDisabled: paletteDark.color7,
+
+  // Secondary Text
+  colorHard: paletteDark.color9,
 
   // Borders / separators
   borderColor: paletteDark.color5,
@@ -93,6 +105,12 @@ const darkTheme = {
   shadowColorHover: paletteDark.color1,
   shadowColorPress: paletteDark.color1,
   shadowColorFocus: paletteDark.color1,
+
+  // Error states
+  colorDanger: paletteDark.color13,
+  borderColorDanger: paletteDark.color14,
+  backgroundDanger: paletteDark.color15,
+  focusDanger: paletteDark.color16,
 };
 
 // TODO: Replace this temporary light/dark-only extraction with a proper theme object setup

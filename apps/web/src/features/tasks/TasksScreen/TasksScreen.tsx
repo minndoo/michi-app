@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button, H1, Text, View, XStack, YStack } from "@repo/ui";
 import { Plus } from "@repo/ui/icons";
 import { TasksList } from "./components";
 
 export const TasksScreen = () => {
+  const router = useRouter();
   const [tab, setTab] = useState<"active" | "completed">("active");
 
   return (
@@ -77,6 +79,7 @@ export const TasksScreen = () => {
         shadowOpacity={0.16}
         shadowRadius={10}
         shadowOffset={{ width: 0, height: 4 }}
+        onPress={() => router.push("/tasks/create")}
       >
         <XStack items="center" gap="$2">
           <Plus color="$backgroundStrong" />

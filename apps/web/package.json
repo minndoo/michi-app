@@ -15,6 +15,8 @@
   },
   "dependencies": {
     "@auth0/nextjs-auth0": "^4.14.1",
+    "@hookform/resolvers": "catalog:",
+    "@repo/form": "*",
     "@repo/ui": "*",
     "@tamagui/next-theme": "catalog:",
     "@tamagui/react-native-svg": "catalog:",
@@ -22,7 +24,9 @@
     "next": "16.1.0",
     "react": "catalog:",
     "react-dom": "catalog:",
-    "react-native-web": "^0.21.2"
+    "react-hook-form": "catalog:",
+    "react-native-web": "^0.21.2",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@repo/eslint-config": "*",

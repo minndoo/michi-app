@@ -11,6 +11,10 @@ export const paletteLight = {
   color10: "#5C927A",
   color11: "#1F2D2A",
   color12: "#0E1513",
+  color13: "#B42318",
+  color14: "#D92D20",
+  color15: "#FEF3F2",
+  color16: "#F04438",
 } as const;
 
 export const paletteDark = {
@@ -26,4 +30,8 @@ export const paletteDark = {
   color10: "#6DAE96",
   color11: "#E7EFEA",
   color12: "#FFFFFF",
+  color13: "#F97066",
+  color14: "#F04438",
+  color15: "#2A0E10",
+  color16: "#F97066",
 } as const;
