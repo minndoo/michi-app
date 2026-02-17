@@ -275,10 +275,10 @@ Tokens can be used in component props with the `$` prefix:
 <View p="$4" gap="$2" m="$3" />
 
 // Size tokens - for width, height, dimensions
-<View width="$10" height="$6" />
+<View w="$10" h="$6" />
 
 // Color tokens - for colors and backgrounds
-<View bg="$blue5" color="$gray12" />
+<View bg="$background" color="$color" />
 
 // Radius tokens - for border-radius
 <View rounded="$4" />
@@ -318,11 +318,11 @@ Media queries can be used as style props or with the `useMedia` hook:
 
 ```tsx
 // As style props (prefix with $)
-<View width="100%" $height-lg={{ width: "50%" }} />
+<View w="100%" $height-lg={{ w: "50%" }} />
 
 // Using the useMedia hook
 const media = useMedia()
-if (media.height-lg) {
+if (media["height-lg"]) {
   // Render for this breakpoint
 }
 ```
@@ -439,7 +439,7 @@ The following components are available:
   - Switch.Thumb
 - Tabs
 - Text
-  - Text.Area
+- TextArea
 - ThemeableStack
 - Thumb
 - View
@@ -450,4 +450,3 @@ The following components are available:
 - YGroup
 - YStack
 - ZStack
-

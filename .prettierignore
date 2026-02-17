@@ -7,3 +7,4 @@ ai/**
 /dist/**
 **/dist/
 **/generated/
+*.prisma

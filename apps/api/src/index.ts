@@ -46,7 +46,15 @@ if (swaggerSpec) {
     res.json(swaggerSpec);
   });
 
-  app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+  app.use(
+    "/docs",
+    swaggerUi.serve,
+    swaggerUi.setup(swaggerSpec, {
+      swaggerOptions: {
+        displayOperationId: true,
+      },
+    }),
+  );
 } else {
   console.warn("Swagger spec not found at startup. /docs is disabled.");
 }

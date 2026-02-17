@@ -45,7 +45,7 @@ bun run check-types
 
 ```bash
 # Typecheck
-bun run type-checks
+bun run check-types
 ```
 
 ```bash
@@ -58,43 +58,51 @@ bun run build
 bun run dev
 ```
 
+## Migration safety rules
+
+- When working with Prisma migrations, always take the safest path to end with a single correct migration file for the current change.
+- Do not rewrite or duplicate already applied migrations in a way that forces a reset by default.
+- Prefer generating one new migration and verifying it matches `schema.prisma` and existing DB state.
+- If migration steps cannot be executed safely in the environment, stop and ask the user to run the required DB/migration command(s) manually.
+
 
 **IMPORTANT: For styling and UI work always check this document.**
 
 For UI work, always read ai/tamagui.prompt.md.
 Treat it as authoritative. Never restate it.
+If this file conflicts with ai/tamagui.prompt.md, ai/tamagui.prompt.md is canonical.
 
 ## Styling rules (Tamagui)
 
 - Never hardcode hex colors in components.
 - Always use semantic theme tokens: $background, $backgroundStrong, $color, $colorMuted, $borderColor, $outlineColor, $shadowColor.
 Examples:
-✅ <YStack backgroundColor="$background" />
+✅ <YStack bg="$background" />
 ✅ <Text color="$colorMuted" />
-❌ <YStack backgroundColor="#F6F8F7" />
-❌ <YStack backgroundColor="$color3" />
+❌ <YStack bg="#F6F8F7" />
+❌ <YStack bg="$color3" />
 
 - There could be tokens with duplicate hex code like $backgroundHard and $outlineColor where both have the value #6FA58C. Always try to use relevant token name to it's function used
 Examples:
-✅ <View backgroundColor="$backgroundHard" />
+✅ <View bg="$backgroundHard" />
 ✅ <View outline="2px solid $outlineColor" />
-❌ <View backgroundColor="$outlineColor" />
+❌ <View bg="$outlineColor" />
 ❌ <YStack outline="2px solid $backgroundColor" />
 
 ## Tokens rules
 
-- Always prefix a token usage with a proper usage if possible
-- Only use non prefixed values if you can't determine what prefix fits into the usage
+- Use numeric token shorthand values only (for example: `$1`, `$2.5`, `$10`).
+- Do not use prefixed token namespaces like `$space.1`, `$size.1`, `$radius.1`, `$zIndex.1`.
 Examples:
-✅ <View rounded="$radius.1" />
-✅ <View z="$zIndex.1" />
-✅ <View px="$space.1" mx="$space.1" />
-✅ <Text fontSize="$size.1" />
+✅ <View rounded="$1" />
+✅ <View z="$1" />
+✅ <View px="$1" mx="$1" />
+✅ <Text fontSize="$1" />
 
-❌ <View rounded="$1" />
-❌ <View z="$1" />
-❌ <View px="$1" mx="$1" />
-❌ <Text fontSize="$1" />
+❌ <View rounded="$radius.1" />
+❌ <View z="$zIndex.1" />
+❌ <View px="$space.1" mx="$space.1" />
+❌ <Text fontSize="$size.1" />
 
 ## Component rules
 
@@ -102,8 +110,8 @@ Examples:
 - Check ai/tamagui.prompt.md for available components
 - Do NOT implement UI controls using Stack/View if Tamagui has a component.
 - Use:
-  - Checkbox (+ Checkbox.Indicator) for checkboxes
-  - Progress (+ Progress.Indicator) for progress bars
+  - Checkbox (+ Checkbox.IndicatorFrame) for checkboxes
+  - Progress (+ Progress.IndicatorFrame + Progress.Indicator) for progress bars
   - Switch for toggles
   - RadioGroup for radios
   - Select (or your select wrapper) for selects

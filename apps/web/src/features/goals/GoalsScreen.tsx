@@ -31,7 +31,7 @@ export const GoalsScreen = () => {
     };
     goalProgress.set(task.goalId, {
       total: existing.total + 1,
-      completed: existing.completed + (task.completed ? 1 : 0),
+      completed: existing.completed + (task.status === "DONE" ? 1 : 0),
     });
   }
 

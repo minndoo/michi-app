@@ -1,4 +1,5 @@
 import { prisma } from "./lib/prisma.js";
+import type { TaskStatus } from "./generated/prisma/client.js";
 
 const GOAL_WORDS = [
   "Fitness",
@@ -107,13 +108,17 @@ const seed = async () => {
       goalIds.push(goal.id);
     }
 
-    const tasksData = Array.from({ length: 20 }, (_, index) => ({
-      userId: user.id,
-      title: randomTaskTitle(index),
-      description: randomDescription(),
-      completed: Math.random() < 0.3,
-      goalId: maybeGoalId(goalIds),
-    }));
+    const tasksData = Array.from({ length: 20 }, (_, index) => {
+      const status: TaskStatus = Math.random() < 0.3 ? "DONE" : "TODO";
+      return {
+        userId: user.id,
+        title: randomTaskTitle(index),
+        description: randomDescription(),
+        status,
+        completedAt: status === "DONE" ? new Date() : null,
+        goalId: maybeGoalId(goalIds),
+      };
+    });
 
     await prisma.task.createMany({
       data: tasksData,

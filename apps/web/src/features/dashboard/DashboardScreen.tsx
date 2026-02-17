@@ -1,7 +1,13 @@
 "use client";
 
-import { H2, Text, View, XStack, YStack } from "@repo/ui";
+import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { H2, Text, View, XStack, YStack, Checkbox, Spinner } from "@repo/ui";
 import { Accessibility, BookOpen, ChevronRight, Check } from "@repo/ui/icons";
+import {
+  getGetTasksQueryKey,
+  useUpdateTask,
+} from "@/lib/api/generated/tasks/tasks";
 import { useGetGoals } from "./hooks/useGetGoals";
 import { useGetTasks } from "./hooks/useGetTasks";
 import { Section } from "./components/Section";
@@ -21,13 +27,18 @@ export const DashboardScreen = () => {
     isError: goalsError,
     error: goalsErrorDetails,
   } = useGetGoals();
+  const [savingTaskIds, setSavingTaskIds] = useState<Record<string, true>>({});
+  const queryClient = useQueryClient();
+  const updateTaskMutation = useUpdateTask();
 
   const tasks = tasksData?.data ?? [];
   const goals = goalsData?.data ?? [];
 
   const goalsProgress = goals.map((goal, index) => {
     const tasksForGoal = tasks.filter((task) => task.goalId === goal.id);
-    const completedTasks = tasksForGoal.filter((task) => task.completed).length;
+    const completedTasks = tasksForGoal.filter(
+      (task) => task.status === "DONE",
+    ).length;
     const totalTasks = tasksForGoal.length;
     const progress =
       totalTasks === 0 ? 0 : Math.round((completedTasks / totalTasks) * 100);
@@ -41,6 +52,33 @@ export const DashboardScreen = () => {
       icon: Icon,
     };
   });
+
+  const handleToggleTask = (taskId: string, status: "TODO" | "DONE") => {
+    setSavingTaskIds((prev) => ({
+      ...prev,
+      [taskId]: true,
+    }));
+    updateTaskMutation.mutate(
+      {
+        id: taskId,
+        data: {
+          status: status === "DONE" ? "TODO" : "DONE",
+        },
+      },
+      {
+        onSettled: () => {
+          setSavingTaskIds((prev) => {
+            const next = { ...prev };
+            delete next[taskId];
+            return next;
+          });
+          void queryClient.invalidateQueries({
+            queryKey: getGetTasksQueryKey(),
+          });
+        },
+      },
+    );
+  };
 
   return (
     <YStack gap="$3">
@@ -86,32 +124,46 @@ export const DashboardScreen = () => {
           <Text color="$colorMuted">No tasks found.</Text>
         ) : (
           <YStack gap="$3">
-            {tasks.slice(0, 4).map((task) => (
-              <XStack key={task.id} items="center" gap="$3">
-                <View
-                  minW={40}
-                  minH={40}
-                  rounded="$4"
-                  borderWidth={2}
-                  borderColor={
-                    task.completed ? "$outlineColor" : "$borderColor"
-                  }
-                  bg={task.completed ? "$outlineColor" : "transparent"}
-                  items="center"
-                  justify="center"
-                >
-                  {task.completed ? (
-                    <Check size={23} color="$backgroundStrong" />
-                  ) : null}
-                </View>
-                <Text
-                  color={task.completed ? "$colorMuted" : "$color"}
-                  textDecorationLine={task.completed ? "line-through" : "none"}
-                >
-                  {task.title}
-                </Text>
-              </XStack>
-            ))}
+            {tasks.slice(0, 4).map((task) => {
+              const isSaving = Boolean(savingTaskIds[task.id]);
+              return (
+                <XStack key={task.id} items="center" gap="$3">
+                  <Checkbox
+                    minW={40}
+                    minH={40}
+                    rounded="$4"
+                    borderWidth={2}
+                    borderColor={
+                      task.status === "DONE" ? "$outlineColor" : "$borderColor"
+                    }
+                    bg={
+                      task.status === "DONE" ? "$outlineColor" : "transparent"
+                    }
+                    checked={isSaving || task.status === "DONE"}
+                    disabled={isSaving}
+                    onCheckedChange={() =>
+                      handleToggleTask(task.id, task.status)
+                    }
+                  >
+                    <Checkbox.Indicator>
+                      {isSaving ? (
+                        <Spinner color="$backgroundStrong" />
+                      ) : (
+                        <Check size={23} color="$backgroundStrong" />
+                      )}
+                    </Checkbox.Indicator>
+                  </Checkbox>
+                  <Text
+                    color={task.status === "DONE" ? "$colorMuted" : "$color"}
+                    textDecorationLine={
+                      task.status === "DONE" ? "line-through" : "none"
+                    }
+                  >
+                    {task.title}
+                  </Text>
+                </XStack>
+              );
+            })}
           </YStack>
         )}
       </Section>

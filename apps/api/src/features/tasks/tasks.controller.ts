@@ -7,6 +7,7 @@ import {
   Patch,
   Path,
   Post,
+  Query,
   Request,
   Route,
   SuccessResponse,
@@ -15,6 +16,7 @@ import {
 import {
   tasksService,
   type CreateTaskInput,
+  type TaskStatus,
   type TaskResponse,
   type UpdateTaskInput,
 } from "./tasks.service.js";
@@ -44,9 +46,10 @@ export class TasksController extends Controller {
   @OperationId("getTasks")
   public async getTasks(
     @Request() request: ExpressRequest,
+    @Query() status?: TaskStatus,
   ): Promise<TaskResponse[]> {
     const userId = getUserId(request);
-    return tasksService.getTasks({ userId });
+    return tasksService.getTasks({ userId, status });
   }
 
   @Get("{id}")

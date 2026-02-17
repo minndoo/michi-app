@@ -18,10 +18,12 @@ export interface UpdateTaskInput {
   title?: string;
   description?: string | null;
   goalId?: string | null;
+  status?: TaskStatus;
 }
 
 export interface GetTasksParams {
   userId: string;
+  status?: TaskStatus;
 }
 
 export interface GetTaskByIdParams {
@@ -44,17 +46,21 @@ interface TaskRecord {
   id: string;
   title: string;
   description: string | null;
-  completed: boolean;
+  status: TaskStatus;
+  completedAt: Date | null;
   createdAt: Date;
   updatedAt: Date | null;
   goalId: string | null;
 }
 
+export type TaskStatus = "TODO" | "DONE";
+
 export interface TaskResponse {
   id: string;
   title: string;
   description: string | null;
-  completed: boolean;
+  status: TaskStatus;
+  completedAt: string | null;
   createdAt: string;
   updatedAt: string | null;
   goalId: string | null;
@@ -64,7 +70,8 @@ const taskSelect = {
   id: true,
   title: true,
   description: true,
-  completed: true,
+  status: true,
+  completedAt: true,
   createdAt: true,
   updatedAt: true,
   goalId: true,
@@ -74,16 +81,20 @@ const toTaskResponse = (task: TaskRecord): TaskResponse => ({
   id: task.id,
   title: task.title,
   description: task.description,
-  completed: task.completed,
+  status: task.status,
+  completedAt: task.completedAt ? task.completedAt.toISOString() : null,
   createdAt: task.createdAt.toISOString(),
   updatedAt: task.updatedAt ? task.updatedAt.toISOString() : null,
   goalId: task.goalId,
 });
 
 class TasksService {
-  async getTasks({ userId }: GetTasksParams): Promise<TaskResponse[]> {
+  async getTasks({ userId, status }: GetTasksParams): Promise<TaskResponse[]> {
     const tasks = await prisma.task.findMany({
-      where: { userId },
+      where: {
+        userId,
+        status,
+      },
       select: taskSelect,
     });
 
@@ -140,6 +151,8 @@ class TasksService {
       title?: string;
       description?: string | null;
       goalId?: string | null;
+      status?: TaskStatus;
+      completedAt?: Date | null;
     } = {};
 
     if (data.title !== undefined) {
@@ -167,6 +180,15 @@ class TasksService {
         }
 
         updateData.goalId = data.goalId;
+      }
+    }
+
+    if (data.status !== undefined) {
+      updateData.status = data.status;
+      if (data.status === "DONE") {
+        updateData.completedAt = new Date();
+      } else {
+        updateData.completedAt = null;
       }
     }
 

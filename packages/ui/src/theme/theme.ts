@@ -95,14 +95,22 @@ const darkTheme = {
   shadowColorFocus: paletteDark.color1,
 };
 
+// TODO: Replace this temporary light/dark-only extraction with a proper theme object setup
+// that keeps intended custom styling behavior without relying on subtheme removal.
+// explicitly extract only 2 themes as
+// default config imports multiple themes that could "override" and affect root theme
+// e. g. light_Button/dark_Button -> Button has it's own theme context, using $outlineColor will not resolve from your root theme
+// but will be resolved from this theme
+const { light: defaultConfigLight, dark: defaultConfigDark } =
+  defaultConfig.themes;
+
 export const themes = {
-  ...defaultConfig.themes,
   light: {
-    ...defaultConfig.themes.light,
+    ...defaultConfigLight,
     ...lightTheme,
   },
   dark: {
-    ...defaultConfig.themes.dark,
+    ...defaultConfigDark,
     ...darkTheme,
   },
 };
