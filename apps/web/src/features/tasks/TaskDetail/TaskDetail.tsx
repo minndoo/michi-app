@@ -23,6 +23,8 @@ export const TaskDetail = ({ taskId }: TaskDetailProps) => {
         <Text color="$outlineColor">TaskDetail</Text>
         <Text color="$colorMuted">Task ID: {taskId}</Text>
       </View>
+
+      {/* TODO: Use LinkButton */}
       <Button
         variant="outlined"
         onPress={() => router.push(`/tasks/${taskId}/edit`)}

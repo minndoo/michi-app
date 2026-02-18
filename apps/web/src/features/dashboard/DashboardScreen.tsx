@@ -44,6 +44,8 @@ export const DashboardScreen = () => {
       totalTasks === 0 ? 0 : Math.round((completedTasks / totalTasks) * 100);
     const Icon = goalIcons[index % goalIcons.length] ?? Accessibility;
 
+    // TODO: Aggregate progress data on backend
+
     return {
       id: goal.id,
       title: goal.title,

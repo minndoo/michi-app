@@ -69,6 +69,8 @@ export const TasksScreen = () => {
         <TasksList status="DONE" />
       )}
 
+      {/* TODO: Make button sticky */}
+      {/* TODO: Use LinkButton */}
       <Button
         bg="$backgroundHard"
         rounded="$9"

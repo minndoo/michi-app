@@ -2,24 +2,31 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  FormDateInput,
+  FormDatePicker,
   FormInput,
   FormSelect,
   FormTextArea,
   type FormSelectOption,
 } from "@repo/form";
-import { Button, Text, View, YStack } from "@repo/ui";
-import { useMemo } from "react";
+import { Button, Spinner, Text, View, XStack, YStack } from "@repo/ui";
+import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { useGetGoals } from "@/features/goals/hooks/useGetGoals";
 import { taskFormSchema, type TaskFormValues } from "./schema";
 
 export type TaskFormProps = {
-  mode: "create" | "edit";
-  taskId?: string;
+  defaultValues: TaskFormValues;
+  onSubmit: (values: TaskFormValues) => void;
+  isSubmitting?: boolean;
+  submitLabel?: string;
 };
 
-export const TaskForm = ({ mode, taskId }: TaskFormProps) => {
+export const TaskForm = ({
+  defaultValues,
+  onSubmit,
+  isSubmitting = false,
+  submitLabel = "Save task",
+}: TaskFormProps) => {
   const { data: goalsData, isLoading: isGoalsLoading } = useGetGoals();
   const goalOptions = useMemo<FormSelectOption[]>(
     () =>
@@ -30,18 +37,14 @@ export const TaskForm = ({ mode, taskId }: TaskFormProps) => {
     [goalsData?.data],
   );
 
-  const { control, handleSubmit } = useForm<TaskFormValues>({
+  const { control, handleSubmit, reset } = useForm<TaskFormValues>({
     resolver: zodResolver(taskFormSchema),
-    defaultValues: {
-      title: "",
-      description: "",
-      dueDate: "",
-      goalId: "",
-    },
+    defaultValues,
   });
 
-  // TODO: wire create and edit endpoints
-  const onSubmit = () => {};
+  useEffect(() => {
+    reset(defaultValues);
+  }, [defaultValues, reset]);
 
   return (
     <YStack gap="$4">
@@ -53,30 +56,39 @@ export const TaskForm = ({ mode, taskId }: TaskFormProps) => {
         p="$4"
       >
         <Text color="$outlineColor">TaskForm</Text>
-        <Text color="$colorMuted">Mode: {mode}</Text>
-        {taskId ? <Text color="$colorMuted">Task ID: {taskId}</Text> : null}
       </View>
 
       <YStack gap="$4" maxW="100%">
-        <FormInput
-          control={control}
-          name="title"
-          label="Title"
-          placeholder="Task title"
-          required
-        />
+        <YStack
+          gap="$4"
+          $md={{
+            flexDirection: "row",
+            flexWrap: "nowrap",
+            justify: "space-between",
+          }}
+        >
+          <FormInput
+            control={control}
+            name="title"
+            label="Title"
+            placeholder="Task title"
+            grow={1}
+          />
+
+          <FormDatePicker
+            control={control}
+            name="dueAt"
+            label="Due Date"
+            placeholder="YYYY-MM-DD"
+            required
+            grow={1}
+          />
+        </YStack>
         <FormTextArea
           control={control}
           name="description"
           label="Description"
           placeholder="Task description"
-        />
-        <FormDateInput
-          control={control}
-          name="dueDate"
-          label="Due Date"
-          placeholder="YYYY-MM-DD"
-          required
         />
         <FormSelect
           control={control}
@@ -87,8 +99,15 @@ export const TaskForm = ({ mode, taskId }: TaskFormProps) => {
           emptyOptionLabel="No goal"
           disabled={isGoalsLoading}
         />
-        <Button variant="outlined" onPress={handleSubmit(onSubmit)}>
-          Save task
+        <Button
+          variant="outlined"
+          onPress={handleSubmit(onSubmit)}
+          disabled={isSubmitting}
+        >
+          <XStack items="center" gap="$2">
+            {isSubmitting ? <Spinner color="$outlineColor" /> : null}
+            <Text color="$outlineColor">{submitLabel}</Text>
+          </XStack>
         </Button>
       </YStack>
     </YStack>

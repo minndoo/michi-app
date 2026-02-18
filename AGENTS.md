@@ -49,6 +49,11 @@ bun run check-types
 ```
 
 ```bash
+# Tests
+bun run test
+```
+
+```bash
 # Build script
 bun run build
 ```

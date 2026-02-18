@@ -1,5 +1,5 @@
-import { TaskForm } from "@/features/tasks/TaskForm";
+import { CreateTaskForm } from "@/features/tasks/TaskForm";
 
 export default function TaskCreatePage() {
-  return <TaskForm mode="create" />;
+  return <CreateTaskForm />;
 }

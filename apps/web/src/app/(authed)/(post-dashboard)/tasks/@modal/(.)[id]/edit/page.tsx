@@ -1,4 +1,4 @@
-import { TaskForm } from "@/features/tasks/TaskForm";
+import { EditTaskForm } from "@/features/tasks/TaskForm";
 import { TaskRouteModal } from "@/features/tasks/components/TaskRouteModal";
 
 type TaskEditModalPageProps = {
@@ -12,7 +12,7 @@ export default async function TaskEditModalPage({
 
   return (
     <TaskRouteModal title="Edit Task">
-      <TaskForm mode="edit" taskId={id} />
+      <EditTaskForm taskId={id} />
     </TaskRouteModal>
   );
 }

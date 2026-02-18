@@ -1,30 +1,30 @@
 "use client";
 
-import { TextArea } from "@repo/ui";
+import { DatePicker } from "@repo/ui";
 import type { ComponentProps } from "react";
 import type { FieldValues, Path } from "react-hook-form";
 import { FormField } from "./FormField";
 import type { FormControlProps, FormManagedControlPropKeys } from "./types";
 
-export type FormTextAreaProps<
+export type FormDatePickerProps<
   TFieldValues extends FieldValues,
   TName extends Path<TFieldValues>,
 > = FormControlProps<TFieldValues, TName> &
-  Omit<ComponentProps<typeof TextArea>, FormManagedControlPropKeys>;
+  Omit<ComponentProps<typeof DatePicker>, FormManagedControlPropKeys>;
 
-export const FormTextArea = <
+export const FormDatePicker = <
   TFieldValues extends FieldValues,
   TName extends Path<TFieldValues>,
 >({
   control,
   name,
   label,
-  placeholder,
+  placeholder = "YYYY-MM-DD",
   disabled,
   required,
   grow,
-  ...textAreaProps
-}: FormTextAreaProps<TFieldValues, TName>) => {
+  ...datePickerProps
+}: FormDatePickerProps<TFieldValues, TName>) => {
   return (
     <FormField
       control={control}
@@ -45,13 +45,13 @@ export const FormTextArea = <
         disabled: fieldDisabled,
         required: fieldRequired,
       }) => (
-        <TextArea
-          {...textAreaProps}
+        <DatePicker
+          {...datePickerProps}
           id={id}
           name={fieldName}
           value={typeof field.value === "string" ? field.value : ""}
           onBlur={field.onBlur}
-          onChangeText={field.onChange}
+          onValueChange={field.onChange}
           placeholder={fieldPlaceholder}
           disabled={fieldDisabled}
           required={fieldRequired}

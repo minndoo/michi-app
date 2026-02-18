@@ -10,12 +10,14 @@ const createHttpError = (status: number, message: string): HttpError => {
 
 export interface CreateTaskInput {
   title: string;
+  dueAt: string;
   description?: string | null;
   goalId?: string | null;
 }
 
 export interface UpdateTaskInput {
   title?: string;
+  dueAt?: string;
   description?: string | null;
   goalId?: string | null;
   status?: TaskStatus;
@@ -50,6 +52,7 @@ interface TaskRecord {
   completedAt: Date | null;
   createdAt: Date;
   updatedAt: Date | null;
+  dueAt: Date;
   goalId: string | null;
 }
 
@@ -63,6 +66,7 @@ export interface TaskResponse {
   completedAt: string | null;
   createdAt: string;
   updatedAt: string | null;
+  dueAt: string;
   goalId: string | null;
 }
 
@@ -74,8 +78,18 @@ const taskSelect = {
   completedAt: true,
   createdAt: true,
   updatedAt: true,
+  dueAt: true,
   goalId: true,
 } as const;
+
+const parseDueAt = (dueAt: string): Date => {
+  const parsedDueAt = new Date(dueAt);
+  if (Number.isNaN(parsedDueAt.getTime())) {
+    throw createHttpError(400, "Invalid dueAt");
+  }
+
+  return parsedDueAt;
+};
 
 const toTaskResponse = (task: TaskRecord): TaskResponse => ({
   id: task.id,
@@ -85,6 +99,7 @@ const toTaskResponse = (task: TaskRecord): TaskResponse => ({
   completedAt: task.completedAt ? task.completedAt.toISOString() : null,
   createdAt: task.createdAt.toISOString(),
   updatedAt: task.updatedAt ? task.updatedAt.toISOString() : null,
+  dueAt: task.dueAt.toISOString(),
   goalId: task.goalId,
 });
 
@@ -115,6 +130,8 @@ class TasksService {
   }
 
   async createTask({ userId, data }: CreateTaskParams): Promise<TaskResponse> {
+    const parsedDueAt = parseDueAt(data.dueAt);
+
     if (data.goalId) {
       const goal = await prisma.goal.findFirst({
         where: {
@@ -132,6 +149,7 @@ class TasksService {
     const task = await prisma.task.create({
       data: {
         title: data.title,
+        dueAt: parsedDueAt,
         description: data.description,
         goalId: data.goalId,
         userId,
@@ -149,6 +167,7 @@ class TasksService {
   }: UpdateTaskParams): Promise<TaskResponse> {
     const updateData: {
       title?: string;
+      dueAt?: Date;
       description?: string | null;
       goalId?: string | null;
       status?: TaskStatus;
@@ -157,6 +176,10 @@ class TasksService {
 
     if (data.title !== undefined) {
       updateData.title = data.title;
+    }
+
+    if (data.dueAt !== undefined) {
+      updateData.dueAt = parseDueAt(data.dueAt);
     }
 
     if (data.description !== undefined) {

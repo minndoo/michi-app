@@ -81,6 +81,7 @@ export const TaskItem = ({
             <Text color="$outlineColor">Complete</Text>
           </Button>
         ) : null}
+        {/* TODO: Use LinkButton */}
         <Button
           flex={1}
           variant="outlined"

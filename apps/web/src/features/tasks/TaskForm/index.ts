@@ -1,1 +1,2 @@
-export { TaskForm, type TaskFormProps } from "./TaskForm";
+export { CreateTaskForm } from "./CreateTaskForm";
+export { EditTaskForm } from "./EditTaskForm";
