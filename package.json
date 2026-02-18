@@ -3,6 +3,7 @@
   "private": true,
   "scripts": {
     "build": "turbo run build",
+    "test": "turbo run test",
     "commit": "cz",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
@@ -45,7 +46,8 @@
       "@tamagui/config": "2.0.0-rc.0",
       "@tamagui/next-theme": "2.0.0-rc.0",
       "@tamagui/get-button-sized": "2.0.0-rc.0",
-      "react-native-svg": "^15.15.1"
+      "react-native-svg": "^15.15.1",
+      "vitest": "^3.2.4"
     }
   },
   "config": {

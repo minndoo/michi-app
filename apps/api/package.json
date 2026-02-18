@@ -18,7 +18,9 @@
     "tsoa:routes": "tsoa routes",
     "tsoa:spec": "tsoa spec",
     "tsoa:gen": "bun run tsoa:spec && bun run tsoa:routes",
-    "prepare": "bun run tsoa:routes && bun run prisma:generate"
+    "prepare": "bun run tsoa:routes && bun run prisma:generate",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.3.0",
@@ -43,6 +45,7 @@
     "prisma": "^7.3.0",
     "tsoa": "^6.6.0",
     "tsx": "^4.19.2",
-    "typescript": "5.9.2"
+    "typescript": "5.9.2",
+    "vitest": "catalog:"
   }
 }
