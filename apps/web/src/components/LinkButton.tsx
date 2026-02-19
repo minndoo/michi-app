@@ -1,25 +1,26 @@
-import Link, { type LinkProps } from "next/link";
-import {
-  LinkButton as LinkButtonBase,
-  type LinkButtonProps as LinkButtonPropsBase,
-} from "@repo/ui";
+import Link from "next/link";
+import { Button, type ButtonProps as ButtonPropsBase, styled } from "@repo/ui";
 
-type LinkButtonProps = {
-  children: React.ReactNode;
-  href: LinkProps["href"];
-  buttonProps?: Omit<LinkButtonPropsBase, "children">;
-  linkProps?: Omit<LinkProps, "href" | "children">;
+type NextLinkProps = React.ComponentProps<typeof Link>;
+
+type LinkButtonProps = NextLinkProps & {
+  buttonProps?: Omit<ButtonPropsBase, "children">;
 };
 
+const ButtonFrame = styled(Button.Frame, {
+  // render: "div",
+  role: undefined,
+});
+
 export const LinkButton = ({
-  children,
   href,
-  linkProps,
   buttonProps,
+  children,
+  ...props
 }: LinkButtonProps) => {
   return (
-    <Link href={href} {...linkProps}>
-      <LinkButtonBase {...buttonProps}>{children}</LinkButtonBase>
+    <Link href={href} {...props}>
+      <ButtonFrame {...buttonProps}>{children}</ButtonFrame>
     </Link>
   );
 };
