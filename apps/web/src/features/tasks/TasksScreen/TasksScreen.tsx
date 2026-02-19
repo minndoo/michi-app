@@ -18,19 +18,19 @@ export const TasksScreen = () => {
   return (
     <YStack gap="$4" position="relative" pb="$12">
       <YStack py="$2">
-        <H1 color="$outlineColor">My Tasks</H1>
+        <H1 color="$primary">My Tasks</H1>
       </YStack>
 
       <AppTabs tabs={tabs} tabsContent={tabsContent} />
 
       <LinkButton
         href="/tasks/create"
-        style={{ position: "sticky", bottom: "20px" }}
+        style={{ position: "sticky", bottom: "20px", alignSelf: "center" }}
         buttonProps={{
-          variant: "outlined",
+          variant: "primary",
         }}
       >
-        <Text>Create a new Task</Text>
+        <Text color="inherit">Create a new Task</Text>
       </LinkButton>
     </YStack>
   );

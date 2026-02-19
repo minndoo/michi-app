@@ -8,7 +8,7 @@ type LinkButtonProps = NextLinkProps & {
 };
 
 const ButtonFrame = styled(Button.Frame, {
-  // render: "div",
+  render: "div",
   role: undefined,
 });
 

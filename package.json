@@ -44,6 +44,7 @@
       "@tamagui/lucide-icons": "2.0.0-rc.0",
       "@tamagui/react-native-svg": "2.0.0-rc.0",
       "@tamagui/config": "2.0.0-rc.0",
+      "@tamagui/themes": "2.0.0-rc.0",
       "@tamagui/next-theme": "2.0.0-rc.0",
       "@tamagui/get-button-sized": "2.0.0-rc.0",
       "react-native-svg": "^15.15.1",

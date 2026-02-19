@@ -57,7 +57,7 @@ export const FormField = <
     >
       <Label color="$outlineColor" htmlFor={id}>
         {label}
-        {required ? <Asterisk color="$colorDanger" size="$1" /> : null}
+        {required ? <Asterisk color="$red10" size="$1" /> : null}
       </Label>
       {children({
         id,
@@ -71,7 +71,7 @@ export const FormField = <
         placeholder,
       })}
       {error ? (
-        <Text color="$colorDanger" fontSize="$3" id={errorId}>
+        <Text color="$red10" fontSize="$3" id={errorId}>
           {error}
         </Text>
       ) : null}

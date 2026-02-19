@@ -14,14 +14,14 @@ export const TaskDetail = ({ taskId }: TaskDetailProps) => {
   return (
     <YStack gap="$4">
       <View
-        bg="$backgroundSoft"
+        bg="$white3"
         rounded="$10"
         borderWidth={1}
         borderColor="$borderColor"
         p="$4"
       >
         <Text color="$outlineColor">TaskDetail</Text>
-        <Text color="$colorMuted">Task ID: {taskId}</Text>
+        <Text color="$primary">Task ID: {taskId}</Text>
       </View>
 
       {/* TODO: Use LinkButton */}

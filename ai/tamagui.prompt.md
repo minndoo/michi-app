@@ -136,7 +136,7 @@ export default () => (
 Components can access theme values using `$` token syntax:
 
 ```tsx
-<View bg="$background" color="$color" />
+<View bg="$background" color="$text" />
 ```
 
 **Special props:**
@@ -278,7 +278,7 @@ Tokens can be used in component props with the `$` prefix:
 <View w="$10" h="$6" />
 
 // Color tokens - for colors and backgrounds
-<View bg="$background" color="$color" />
+<View bg="$background" color="$text" />
 
 // Radius tokens - for border-radius
 <View rounded="$4" />

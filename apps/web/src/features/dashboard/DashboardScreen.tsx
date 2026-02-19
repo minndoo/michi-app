@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { H2, Text, View, XStack, YStack, Checkbox, Spinner } from "@repo/ui";
-import { Accessibility, BookOpen, ChevronRight, Check } from "@repo/ui/icons";
+import { H2, Text, View, XStack, YStack, Checkbox } from "@repo/ui";
+import { Accessibility, BookOpen, ChevronRight } from "@repo/ui/icons";
 import {
   getGetTasksQueryKey,
   useUpdateTask,
@@ -85,27 +85,27 @@ export const DashboardScreen = () => {
   return (
     <YStack gap="$3">
       <YStack gap="$1.5" py="$2">
-        <H2 color="$color" fontWeight="700">
+        <H2 color="$text" fontWeight="700">
           Good Morning, Sarah
         </H2>
-        <Text color="$colorMuted">Here&apos;s to a positive day ahead.</Text>
+        <Text color="$primary">Here&apos;s to a positive day ahead.</Text>
       </YStack>
       <View
-        bg="$backgroundSoft"
+        bg="$white3"
         rounded="$radius.6"
         p="$5"
         borderWidth={1}
         borderColor="$borderColor"
       >
         <XStack justify="space-between" items="center" mb="$2">
-          <Text color="$outlineColor" fontWeight="600" letterSpacing={1}>
+          <Text color="$primary" fontWeight="600" letterSpacing={1}>
             TODAY&apos;S FOCUS
           </Text>
           <ChevronRight size={28} color="$outlineColor" />
         </XStack>
         <YStack gap="$1">
-          <H2 color="$color">Mindful Morning Routine</H2>
-          <Text color="$colorMuted">Take 10 minutes for a mindful start.</Text>
+          <H2 color="$text">Mindful Morning Routine</H2>
+          <Text color="$primary">Take 10 minutes for a mindful start.</Text>
         </YStack>
       </View>
 
@@ -115,15 +115,15 @@ export const DashboardScreen = () => {
         contentGap="$3"
       >
         {tasksLoading ? (
-          <Text color="$colorMuted">Loading tasks...</Text>
+          <Text color="$primary">Loading tasks...</Text>
         ) : tasksError ? (
-          <Text color="$colorMuted">
+          <Text color="$primary">
             {tasksErrorDetails instanceof Error
               ? tasksErrorDetails.message
               : "Failed to load tasks"}
           </Text>
         ) : tasks.length === 0 ? (
-          <Text color="$colorMuted">No tasks found.</Text>
+          <Text color="$primary">No tasks found.</Text>
         ) : (
           <YStack gap="$3">
             {tasks.slice(0, 4).map((task) => {
@@ -131,32 +131,16 @@ export const DashboardScreen = () => {
               return (
                 <XStack key={task.id} items="center" gap="$3">
                   <Checkbox
-                    minW={40}
-                    minH={40}
-                    rounded="$4"
-                    borderWidth={2}
-                    borderColor={
-                      task.status === "DONE" ? "$outlineColor" : "$borderColor"
-                    }
-                    bg={
-                      task.status === "DONE" ? "$outlineColor" : "transparent"
-                    }
+                    size="$4"
                     checked={isSaving || task.status === "DONE"}
+                    loading={isSaving}
                     disabled={isSaving}
                     onCheckedChange={() =>
                       handleToggleTask(task.id, task.status)
                     }
-                  >
-                    <Checkbox.Indicator>
-                      {isSaving ? (
-                        <Spinner color="$backgroundStrong" />
-                      ) : (
-                        <Check size={23} color="$backgroundStrong" />
-                      )}
-                    </Checkbox.Indicator>
-                  </Checkbox>
+                  />
                   <Text
-                    color={task.status === "DONE" ? "$colorMuted" : "$color"}
+                    color={task.status === "DONE" ? "$tertiary" : "$text"}
                     textDecorationLine={
                       task.status === "DONE" ? "line-through" : "none"
                     }
@@ -176,15 +160,15 @@ export const DashboardScreen = () => {
         viewAllAction={{ href: "/goals", actionLabel: "View All" }}
       >
         {goalsLoading ? (
-          <Text color="$colorMuted">Loading goals...</Text>
+          <Text color="$primary">Loading goals...</Text>
         ) : goalsError ? (
-          <Text color="$colorMuted">
+          <Text color="$primary">
             {goalsErrorDetails instanceof Error
               ? goalsErrorDetails.message
               : "Failed to load goals"}
           </Text>
         ) : goalsProgress.length === 0 ? (
-          <Text color="$colorMuted">No goals found.</Text>
+          <Text color="$primary">No goals found.</Text>
         ) : (
           <YStack gap="$4">
             {goalsProgress.map(
@@ -193,26 +177,19 @@ export const DashboardScreen = () => {
                   <XStack justify="space-between" items="center">
                     <XStack items="center" gap="$2">
                       <Icon size={30} color="$outlineColor" />
-                      <Text color="$color">{title}</Text>
+                      <Text color="$text">{title}</Text>
                     </XStack>
-                    <Text color="$outlineColor" fontWeight="600">
-                      {progress}%
-                    </Text>
+                    <Text color="$primary">{progress}%</Text>
                   </XStack>
-                  <View
-                    minH={16}
-                    rounded="$6"
-                    bg="$backgroundSoft"
-                    overflow="hidden"
-                  >
+                  <View minH={16} rounded="$6" bg="$white3" overflow="hidden">
                     <View
                       minH={16}
-                      bg="$backgroundHard"
+                      bg="$primaryHover"
                       rounded="$6"
                       style={{ width: `${progress}%` }}
                     />
                   </View>
-                  <Text color="$colorMuted">{subtitle}</Text>
+                  <Text color="$primary">{subtitle}</Text>
                 </YStack>
               ),
             )}

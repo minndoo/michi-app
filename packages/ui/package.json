@@ -26,6 +26,7 @@
     "react-dom": "catalog:",
     "tamagui": "catalog:",
     "@tamagui/config": "catalog:",
+    "@tamagui/themes": "catalog:",
     "@tamagui/get-button-sized": "catalog:",
     "@tamagui/lucide-icons": "catalog:",
     "@tamagui/core": "catalog:"

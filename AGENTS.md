@@ -76,40 +76,12 @@ bun run dev
 For UI work, always read ai/tamagui.prompt.md.
 Treat it as authoritative. Never restate it.
 If this file conflicts with ai/tamagui.prompt.md, ai/tamagui.prompt.md is canonical.
-Never use shorthand properties inside packages/ui
 
 
 ## Styling rules (Tamagui)
 
 - Never hardcode hex colors in components.
-- Always use semantic theme tokens: $background, $backgroundStrong, $color, $colorMuted, $borderColor, $outlineColor, $shadowColor.
-Examples:
-✅ <YStack bg="$background" />
-✅ <Text color="$colorMuted" />
-❌ <YStack bg="#F6F8F7" />
-❌ <YStack bg="$color3" />
-
-- There could be tokens with duplicate hex code like $backgroundHard and $outlineColor where both have the value #6FA58C. Always try to use relevant token name to it's function used
-Examples:
-✅ <View bg="$backgroundHard" />
-✅ <View outline="2px solid $outlineColor" />
-❌ <View bg="$outlineColor" />
-❌ <YStack outline="2px solid $backgroundColor" />
-
-## Tokens rules
-
-- Use numeric token shorthand values only (for example: `$1`, `$2.5`, `$10`).
-- Do not use prefixed token namespaces like `$space.1`, `$size.1`, `$radius.1`, `$zIndex.1`.
-Examples:
-✅ <View rounded="$1" />
-✅ <View z="$1" />
-✅ <View px="$1" mx="$1" />
-✅ <Text fontSize="$1" />
-
-❌ <View rounded="$radius.1" />
-❌ <View z="$zIndex.1" />
-❌ <View px="$space.1" mx="$space.1" />
-❌ <Text fontSize="$size.1" />
+- Always access theme values with $
 
 ## Component rules
 

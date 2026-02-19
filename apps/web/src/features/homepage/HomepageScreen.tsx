@@ -15,13 +15,8 @@ import styles from "./animations.module.css";
 
 const Logo = () => (
   <XStack items="center" justify="center" gap="$2" mt="$2">
-    <Leaf size={34} color="$outlineColor" />
-    <Text
-      color="$outlineColor"
-      fontSize="$10"
-      fontWeight="700"
-      letterSpacing={0.4}
-    >
+    <Leaf size={34} color="$primary" />
+    <Text color="$primary" fontSize="$10" fontWeight="700" letterSpacing={0.4}>
       Michi
     </Text>
   </XStack>
@@ -43,9 +38,9 @@ export const HomepageScreen = () => {
           position="relative"
           overflow="hidden"
           rounded="$12"
-          bg="$backgroundStrong"
+          bg="$strong"
           borderWidth={1}
-          borderColor="$borderColor"
+          borderColor="$secondary"
           minH={315}
           maxH={315}
           minW={315}
@@ -63,7 +58,7 @@ export const HomepageScreen = () => {
             $md={{ minH: 605, minW: 605, l: -75 }}
             $xl={{ minH: 645, minW: 645 }}
             style={{ borderRadius: "50%" }}
-            bg="$backgroundSoft"
+            bg="$white3"
           />
           <View
             position="absolute"
@@ -92,7 +87,7 @@ export const HomepageScreen = () => {
             ml={-39}
             minW={78}
             minH={78}
-            bg="$backgroundHard"
+            bg="$primaryHover"
             rounded="$8"
             items="center"
             justify="center"
@@ -102,7 +97,7 @@ export const HomepageScreen = () => {
             shadowOffset={{ width: 0, height: 6 }}
             className={styles.bounceDelay1}
           >
-            <Check size={34} color="$backgroundStrong" />
+            <Check size={34} color="$white2" />
           </View>
         </View>
 
@@ -113,7 +108,7 @@ export const HomepageScreen = () => {
 
           <Text
             text="center"
-            color="$colorMuted"
+            color="$primary"
             maxW="$20"
             fontSize="$6"
             lineHeight="$6"
@@ -127,30 +122,33 @@ export const HomepageScreen = () => {
           <LinkButton
             href="/auth/login?returnTo=/dashboard"
             buttonProps={{
-              variant: "hard",
-              gap: "$2",
+              variant: "primary",
               rounded: "$6",
             }}
           >
-            <Text color="$backgroundStrong" fontSize="$6" fontWeight="500">
+            <Text fontSize="$6" fontWeight="500" color="$white2">
               Get started
             </Text>
-            <ArrowRight size={24} color="$backgroundStrong" />
+            <ArrowRight size={24} color="$white2" />
           </LinkButton>
 
           <LinkButton
             href="/auth/login?returnTo=/dashboard"
-            buttonProps={{ variant: "outlined", gap: "$2", rounded: "$6" }}
+            buttonProps={{
+              variant: "outlined",
+              gap: "$2",
+              rounded: "$6",
+            }}
           >
-            <Text color="$outlineColor" fontSize="$6" fontWeight="500">
+            <Text fontSize="$6" fontWeight="500" color="inherit">
               Log in
             </Text>
           </LinkButton>
         </YStack>
 
-        <Text color="$colorMuted" fontSize="$4" text="center" px="$2">
+        <Text color="$primary" fontSize="$4" text="center" px="$2">
           By continuing, you agree to our{" "}
-          <Anchor asChild color="$colorMuted">
+          <Anchor asChild color="$primary">
             <Link href="/terms" style={{ textDecoration: "underline" }}>
               Terms
             </Link>

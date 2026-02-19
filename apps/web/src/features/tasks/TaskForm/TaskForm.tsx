@@ -49,7 +49,7 @@ export const TaskForm = ({
   return (
     <YStack gap="$4">
       <View
-        bg="$backgroundSoft"
+        bg="$white3"
         rounded="$10"
         borderWidth={1}
         borderColor="$borderColor"

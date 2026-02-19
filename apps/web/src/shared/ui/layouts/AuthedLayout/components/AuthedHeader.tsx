@@ -8,8 +8,8 @@ type AuthedHeaderProps = {
 
 const Logo = () => (
   <XStack items="center" gap="$2">
-    <Leaf size={24} color="$outlineColor" />
-    <H2 color="$outlineColor" fontWeight="bold">
+    <Leaf size={24} color="$primary" />
+    <H2 color="$primary" fontWeight="bold">
       Michi
     </H2>
   </XStack>
@@ -27,8 +27,8 @@ export const AuthedHeader = ({ isDashboard = false }: AuthedHeaderProps) => {
     <XStack items="flex-start" justify="space-between" py="$4" width="100%">
       {HeaderLeft}
       <XStack items="center" gap="$4">
-        <Bell size={24} color="$colorMuted" />
-        <Menu size={24} color="$colorMuted" />
+        <Bell size={24} color="$subtleText" />
+        <Menu size={24} color="$subtleText" />
       </XStack>
     </XStack>
   );

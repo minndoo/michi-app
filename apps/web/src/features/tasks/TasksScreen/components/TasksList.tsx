@@ -49,13 +49,13 @@ export const TasksList = ({ status }: TasksListProps) => {
   if (isLoading) {
     return (
       <View
-        bg="$backgroundSoft"
+        bg="$white3"
         rounded="$10"
         borderWidth={1}
         borderColor="$borderColor"
         p="$4"
       >
-        <Text color="$colorMuted">Loading tasks...</Text>
+        <Text color="$primary">Loading tasks...</Text>
       </View>
     );
   }
@@ -63,13 +63,13 @@ export const TasksList = ({ status }: TasksListProps) => {
   if (isError) {
     return (
       <View
-        bg="$backgroundSoft"
+        bg="$white3"
         rounded="$10"
         borderWidth={1}
         borderColor="$borderColor"
         p="$4"
       >
-        <Text color="$colorMuted">
+        <Text color="$primary">
           {error instanceof Error ? error.message : "Failed to load tasks"}
         </Text>
       </View>
@@ -79,13 +79,13 @@ export const TasksList = ({ status }: TasksListProps) => {
   if (tasks.length === 0) {
     return (
       <View
-        bg="$backgroundSoft"
+        bg="$white3"
         rounded="$10"
         borderWidth={1}
         borderColor="$borderColor"
         p="$4"
       >
-        <Text color="$colorMuted">No tasks found.</Text>
+        <Text color="$primary">No tasks found.</Text>
       </View>
     );
   }

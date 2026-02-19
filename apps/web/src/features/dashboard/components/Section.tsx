@@ -20,7 +20,7 @@ export const Section = ({
 }: SectionProps) => {
   return (
     <Card
-      bg="$backgroundStrong"
+      bg="$white2"
       p="$5"
       rounded="$radius.6"
       borderWidth={1}
@@ -29,11 +29,13 @@ export const Section = ({
     >
       <Card.Header p="$0">
         <XStack justify="space-between" items="center" minW="100%">
-          <H3 color="$color" fontWeight="bold">
+          <H3 color="$text" fontWeight="bold">
             {title}
           </H3>
           <Link href={viewAllAction.href}>
-            <Text color="$outlineColor">{viewAllAction.actionLabel}</Text>
+            <Text color="$primary" hoverStyle={{ color: "$primaryHover" }}>
+              {viewAllAction.actionLabel}
+            </Text>
           </Link>
         </XStack>
       </Card.Header>

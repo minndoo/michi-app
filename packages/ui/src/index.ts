@@ -8,3 +8,5 @@ export { XStack, YStack, type XStackProps, type YStackProps } from "./Stack";
 export * from "./UIProvider";
 export * from "./DatePicker";
 export * from "./Tabs";
+export { Button, type ButtonProps } from "./Button";
+export { Checkbox, type CheckboxProps } from "./Checkbox";

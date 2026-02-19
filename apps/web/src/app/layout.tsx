@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import { NextTamaguiProvider } from "@/providers/NextTamaguiProvider";
 import AuthProvider from "@/providers/AuthProvider";
 import { ReactQueryProvider } from "@/providers/ReactQueryProvider";
+import { AppShell } from "@/shared/ui/layouts/AppShell";
 
 import "./globals.css";
 
@@ -26,7 +27,9 @@ export default function RootLayout({
       <body>
         <NextTamaguiProvider>
           <AuthProvider>
-            <ReactQueryProvider>{children}</ReactQueryProvider>
+            <ReactQueryProvider>
+              <AppShell>{children}</AppShell>
+            </ReactQueryProvider>
           </AuthProvider>
         </NextTamaguiProvider>
       </body>

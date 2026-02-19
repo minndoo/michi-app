@@ -64,15 +64,18 @@ export const AppTabs = <TTabs extends readonly string[]>({
             return (
               <TamaguiTabs.Tab key={key} value={key} asChild>
                 <YStack gap="$1" hoverStyle={{ cursor: "pointer" }}>
-                  <Text color={isActive ? "$outlineColor" : "$colorMuted"}>
+                  <Text
+                    color={isActive ? "$subtleText" : "$primary"}
+                    hoverStyle={{ color: "$primaryHover" }}
+                  >
                     {tabsContent[key].tabTitle}
                   </Text>
                   <View
-                    minHeight={3}
-                    background={
-                      isActive ? "$outlineColor" : "$colorTransparent"
-                    }
-                    borderRadius="$2"
+                    bg={isActive ? "$subtleText" : "transparent"}
+                    minH="$0.25"
+                    style={{
+                      borderRadius: 7,
+                    }}
                   />
                 </YStack>
               </TamaguiTabs.Tab>
