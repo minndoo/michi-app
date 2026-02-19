@@ -1,5 +1,8 @@
 # Turborepo starter
 
+<!-- TODO: adapt this readme to actual project setup -->
+<!-- TODO: add missing README files to packages -->
+
 This Turborepo starter is maintained by the Turborepo core team.
 
 ## Using this example

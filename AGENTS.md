@@ -76,6 +76,8 @@ bun run dev
 For UI work, always read ai/tamagui.prompt.md.
 Treat it as authoritative. Never restate it.
 If this file conflicts with ai/tamagui.prompt.md, ai/tamagui.prompt.md is canonical.
+Never use shorthand properties inside packages/ui
+
 
 ## Styling rules (Tamagui)
 

@@ -8,3 +8,4 @@ export { XStack, YStack, type XStackProps, type YStackProps } from "./Stack";
 export * from "./UIProvider";
 export * from "./LinkButton";
 export * from "./DatePicker";
+export * from "./Tabs";

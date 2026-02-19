@@ -1,5 +1,7 @@
 # API
 
+<!-- TODO: adapt this readme to actual project setup -->
+
 Express + TypeScript API server with Auth0 authentication for the Michi App monorepo.
 
 ## Getting Started
