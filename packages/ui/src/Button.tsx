@@ -75,7 +75,7 @@ const buttonVariantStyles = {
   },
 } as const;
 
-const ButtonFrame = styled(TamaguiButton.Frame, {
+export const ButtonFrame = styled(TamaguiButton.Frame, {
   variants: {
     variant: buttonVariantStyles,
   },
@@ -93,11 +93,14 @@ const ButtonComponent = styled(TamaguiButton, {
   },
 });
 
+export const ButtonText = TamaguiButton.Text;
+export const ButtonIcon = TamaguiButton.Icon;
+
 export const Button = withStaticProperties(ButtonComponent, {
   Apply: TamaguiButton.Apply,
   Frame: ButtonFrame,
-  Text: TamaguiButton.Text,
-  Icon: TamaguiButton.Icon,
+  Text: ButtonText,
+  Icon: ButtonIcon,
 });
 
 export type ButtonProps = GetProps<typeof ButtonComponent>;

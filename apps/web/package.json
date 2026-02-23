@@ -13,7 +13,8 @@
     "orval:generate": "orval --config orval.config.ts",
     "orval:watch": "orval --config orval.config.ts --watch",
     "test": "vitest run -c vitest.config.ts",
-    "test:watch": "vitest -c vitest.config.ts"
+    "test:watch": "vitest -c vitest.config.ts",
+    "generate:tamagui-prompt": "bunx tamagui generate-prompt --output ../../ai/tamagui.prompt.md"
   },
   "dependencies": {
     "@auth0/nextjs-auth0": "^4.14.1",

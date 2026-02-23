@@ -136,7 +136,7 @@ export default () => (
 Components can access theme values using `$` token syntax:
 
 ```tsx
-<View bg="$background" color="$text" />
+<View bg="$background" color="$color" />
 ```
 
 **Special props:**
@@ -275,10 +275,10 @@ Tokens can be used in component props with the `$` prefix:
 <View p="$4" gap="$2" m="$3" />
 
 // Size tokens - for width, height, dimensions
-<View w="$10" h="$6" />
+<View width="$10" height="$6" />
 
 // Color tokens - for colors and backgrounds
-<View bg="$background" color="$text" />
+<View bg="$blue5" color="$gray12" />
 
 // Radius tokens - for border-radius
 <View rounded="$4" />
@@ -318,11 +318,11 @@ Media queries can be used as style props or with the `useMedia` hook:
 
 ```tsx
 // As style props (prefix with $)
-<View w="100%" $height-lg={{ w: "50%" }} />
+<View width="100%" $height-lg={{ width: "50%" }} />
 
 // Using the useMedia hook
 const media = useMedia()
-if (media["height-lg"]) {
+if (media.height-lg) {
   // Render for this breakpoint
 }
 ```
@@ -358,6 +358,8 @@ The following components are available:
   - AvatarFallback.Frame
 - AvatarFrame
 - Button
+  - Button.Frame
+  - Button.Text
 - Card
   - Card.Background
   - Card.Footer
@@ -439,7 +441,7 @@ The following components are available:
   - Switch.Thumb
 - Tabs
 - Text
-- TextArea
+  - Text.Area
 - ThemeableStack
 - Thumb
 - View
@@ -450,3 +452,4 @@ The following components are available:
 - YGroup
 - YStack
 - ZStack
+

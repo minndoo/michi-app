@@ -6,46 +6,50 @@ import {
   withStaticProperties,
 } from "tamagui";
 
-type BaseCheckboxProps = GetProps<typeof TamaguiCheckbox>;
+export const CheckboxFrame = TamaguiCheckbox;
+export const CheckboxIndicatorFrame = TamaguiCheckbox.Indicator;
 
-export type CheckboxProps = BaseCheckboxProps & {
+type BaseProps = GetProps<typeof TamaguiCheckbox>;
+
+type CheckboxExtraProps = {
   loading?: boolean;
+  bg?: BaseProps["backgroundColor"] | null;
 };
 
-const CheckboxComponent = ({
-  loading,
-  bg,
-  borderColor,
-  checked,
-  ...props
-}: CheckboxProps) => {
-  const resolvedBackground = bg ?? (checked ? "$color8" : "transparent");
+export type CheckboxProps = BaseProps & CheckboxExtraProps;
 
-  const resolvedBorderColor =
-    borderColor ?? (checked ? "$outlineColor" : "$borderColor");
+const CheckboxComponent = TamaguiCheckbox.styleable<CheckboxExtraProps>(
+  ({ loading, bg, borderColor, checked, ...props }, ref) => {
+    const resolvedBackground = bg ?? (checked ? "$color8" : "transparent");
 
-  return (
-    <TamaguiCheckbox
-      bg={resolvedBackground}
-      borderColor={resolvedBorderColor}
-      checked={checked}
-      {...props}
-      role="checkbox"
-      hoverStyle={{
-        cursor: "pointer",
-      }}
-    >
-      <TamaguiCheckbox.Indicator>
-        {loading ? (
-          <Spinner color="$white2" />
-        ) : (
-          <Check size="$1" color="$white2" />
-        )}
-      </TamaguiCheckbox.Indicator>
-    </TamaguiCheckbox>
-  );
-};
+    const resolvedBorderColor =
+      borderColor ?? (checked ? "$outlineColor" : "$borderColor");
+
+    return (
+      <CheckboxFrame
+        backgroundColor={resolvedBackground}
+        borderColor={resolvedBorderColor}
+        checked={checked}
+        {...props}
+        ref={ref}
+        role="checkbox"
+        hoverStyle={{
+          cursor: "pointer",
+        }}
+      >
+        <CheckboxIndicatorFrame>
+          {loading ? (
+            <Spinner color="$white2" />
+          ) : (
+            <Check size="$1" color="$white2" />
+          )}
+        </CheckboxIndicatorFrame>
+      </CheckboxFrame>
+    );
+  },
+);
 
 export const Checkbox = withStaticProperties(CheckboxComponent, {
-  Indicator: TamaguiCheckbox.Indicator,
+  Frame: CheckboxFrame,
+  Indicator: CheckboxIndicatorFrame,
 });

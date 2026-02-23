@@ -48,6 +48,10 @@ bun run check-types --filter=web
   - `bun run test --filter=api`
 - packages/ui
   - `bun run check-types --filter=@repo/ui`
+  - Prompt drift guard: unless explicitly requested by the user, `ai/tamagui.prompt.md` must not change
+  - Check for changes in ai/tamagui.prompt.md:
+    - `cd apps/web && bun run generate:tamagui-prompt`
+    - review `git diff -- ai/tamagui.prompt.md`
 - packages/form
   - `bun run check-types --filter=@repo/form`
 
