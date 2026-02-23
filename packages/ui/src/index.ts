@@ -1,3 +1,5 @@
+import "./tamagui";
+
 // baseline components: all from tamagui
 export * from "tamagui";
 

@@ -27,7 +27,7 @@ const CheckboxComponent = TamaguiCheckbox.styleable<CheckboxExtraProps>(
 
     return (
       <CheckboxFrame
-        backgroundColor={resolvedBackground}
+        bg={resolvedBackground}
         borderColor={resolvedBorderColor}
         checked={checked}
         {...props}

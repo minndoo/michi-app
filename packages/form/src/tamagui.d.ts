@@ -1,4 +1,4 @@
-import {type TamaguiConfig} from "@repo/ui";
+import type { TamaguiConfig } from "@repo/ui/config";
 
 declare module "tamagui" {
   // eslint-disable-next-line @typescript-eslint/no-empty-object-type

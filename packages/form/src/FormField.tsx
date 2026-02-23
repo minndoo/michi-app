@@ -51,10 +51,7 @@ export const FormField = <
   const ariaDescribedBy = error ? errorId : undefined;
 
   return (
-    <YStack
-      gap="$2"
-      style={{ flexGrow: grow === "unset" ? undefined : grow }}
-    >
+    <YStack gap="$2" grow={grow}>
       <Label color="$outlineColor" htmlFor={id}>
         {label}
         {required ? <Asterisk color="$red10" size="$1" /> : null}
