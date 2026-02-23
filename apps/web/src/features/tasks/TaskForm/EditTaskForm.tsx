@@ -71,7 +71,7 @@ export const EditTaskForm = ({ taskId }: EditTaskFormProps) => {
   if (isLoading) {
     return (
       <YStack>
-        <Text color="$subtleText">Loading task...</Text>
+        <Text color="$color10">Loading task...</Text>
       </YStack>
     );
   }
@@ -79,7 +79,7 @@ export const EditTaskForm = ({ taskId }: EditTaskFormProps) => {
   if (isError) {
     return (
       <YStack>
-        <Text color="$subtleText">
+        <Text color="$color10">
           {error instanceof Error ? error.message : "Failed to load task"}
         </Text>
       </YStack>

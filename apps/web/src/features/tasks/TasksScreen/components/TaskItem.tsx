@@ -19,7 +19,7 @@ export const TaskItem = ({
 }: TaskItemProps) => {
   return (
     <YStack
-      bg="$secondaryActive"
+      bg="$color4"
       rounded="$10"
       borderWidth={1}
       borderColor="$borderColor"
@@ -37,23 +37,23 @@ export const TaskItem = ({
             justify="center"
           >
             {task.status === "DONE" ? (
-              <Check color="$tertiary" size={26} />
+              <Check color="$color5" size={26} />
             ) : (
-              <BookOpenText color="$tertiary" size={26} />
+              <BookOpenText color="$color5" size={26} />
             )}
           </View>
           <YStack gap="$1" flex={1}>
-            <H5 color="$text" fontWeight="normal">
+            <H5 color="$color11" fontWeight="normal">
               {task.title}
             </H5>
-            <Text color="$primary" fontSize="$3" lineHeight="$3">
+            <Text color="$color8" fontSize="$3" lineHeight="$3">
               {task.description || "No description"}
             </Text>
           </YStack>
         </XStack>
         <View bg="$white2" rounded="$7" px="$3" py="$1.5">
           <Text
-            color="$primary"
+            color="$color8"
             fontSize="$2"
             lineHeight="$2"
             fontWeight="bold"

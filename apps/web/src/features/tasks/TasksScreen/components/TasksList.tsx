@@ -55,7 +55,7 @@ export const TasksList = ({ status }: TasksListProps) => {
         borderColor="$borderColor"
         p="$4"
       >
-        <Text color="$primary">Loading tasks...</Text>
+        <Text color="$color8">Loading tasks...</Text>
       </View>
     );
   }
@@ -69,7 +69,7 @@ export const TasksList = ({ status }: TasksListProps) => {
         borderColor="$borderColor"
         p="$4"
       >
-        <Text color="$primary">
+        <Text color="$color8">
           {error instanceof Error ? error.message : "Failed to load tasks"}
         </Text>
       </View>
@@ -85,7 +85,7 @@ export const TasksList = ({ status }: TasksListProps) => {
         borderColor="$borderColor"
         p="$4"
       >
-        <Text color="$primary">No tasks found.</Text>
+        <Text color="$color8">No tasks found.</Text>
       </View>
     );
   }

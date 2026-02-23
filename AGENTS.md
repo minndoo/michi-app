@@ -33,68 +33,45 @@ packages/
 * Running scripts
 * Executing commands
 
-Examples: 
+Examples:
 ```bash
 bun install
-bun run dev
-bun run build
-bun run check-types
+bun run check-types --filter=web
 ```
 
-**IMPORTANT: After every code change, validate the build and dev env succeeds.**
+## Validation matrix
+- apps/web
+  - `bun run check-types --filter=web`
+  - `bun run test --filter=web`
+- apps/api
+  - `bun run check-types --filter=api`
+  - `bun run test --filter=api`
+- packages/ui
+  - `bun run check-types --filter=@repo/ui`
+- packages/form
+  - `bun run check-types --filter=@repo/form`
 
-```bash
-# Typecheck
-bun run check-types
-```
+Never run unfiltered monorepo checks unless user explicitly asks for monorepo-wide validation.
 
-```bash
-# Tests
-bun run test
-```
+Linting - run lint only on changed files.
 
-```bash
-# Build script
-bun run build
-```
+## Scope gate
+- Only read/edit files in the touched workspace.
+- Do not inspect unrelated workspaces unless required by imports/types.
+- Keep context local-first and minimal.
 
-```bash
-# Development start
-bun run dev
-```
+## Stop-early policy
+- Stop immediately once requested change is implemented and required scoped checks pass.
+- Do not run extra verification commands unless explicitly requested.
 
-## Migration safety rules
+## Build and infra policy
+- Do not run `bun run build` unless the user explicitly requests it.
+- If user explicitly requests build:
+  - Run as quietly as possible.
+  - Only surface detailed logs on failure.
+- If failure is clearly external/infra-related (network/font/registry transient):
+  - Report once and stop retries unless user asks to retry.
 
-- When working with Prisma migrations, always take the safest path to end with a single correct migration file for the current change.
-- Do not rewrite or duplicate already applied migrations in a way that forces a reset by default.
-- Prefer generating one new migration and verifying it matches `schema.prisma` and existing DB state.
-- If migration steps cannot be executed safely in the environment, stop and ask the user to run the required DB/migration command(s) manually.
-
-
-**IMPORTANT: For styling and UI work always check this document.**
-
-For UI work, always read ai/tamagui.prompt.md.
-Treat it as authoritative. Never restate it.
-If this file conflicts with ai/tamagui.prompt.md, ai/tamagui.prompt.md is canonical.
-
-
-## Styling rules (Tamagui)
-
-- Never hardcode hex colors in components.
-- Always access theme values with $
-
-## Component rules
-
-- When looking up components. Always try to locate components folder within the project. In apps/web the components folder is aliased under @/components. If you can't find relevant components, only then lookup the @repo/ui package
-- Check ai/tamagui.prompt.md for available components
-- Do NOT implement UI controls using Stack/View if Tamagui has a component.
-- Use:
-  - Checkbox (+ Checkbox.IndicatorFrame) for checkboxes
-  - Progress (+ Progress.IndicatorFrame + Progress.Indicator) for progress bars
-  - Switch for toggles
-  - RadioGroup for radios
-  - Select (or your select wrapper) for selects
-  - Button for buttons (no pressable Views)
-  - Input / TextArea for inputs
-- Only use Stack/XStack/YStack for layout and spacing.
-- If unsure whether a component exists, assume it does and search for it in the existing codebase imports.
+## Domain rules
+- UI rules: `docs/agents/ui.md`
+- API rules: `docs/agents/api.md`

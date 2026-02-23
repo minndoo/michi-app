@@ -29,11 +29,11 @@ export const Section = ({
     >
       <Card.Header p="$0">
         <XStack justify="space-between" items="center" minW="100%">
-          <H3 color="$text" fontWeight="bold">
+          <H3 color="$color11" fontWeight="bold">
             {title}
           </H3>
           <Link href={viewAllAction.href}>
-            <Text color="$primary" hoverStyle={{ color: "$primaryHover" }}>
+            <Text color="$color8" hoverStyle={{ color: "$color9" }}>
               {viewAllAction.actionLabel}
             </Text>
           </Link>

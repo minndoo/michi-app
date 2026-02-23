@@ -15,8 +15,8 @@ import styles from "./animations.module.css";
 
 const Logo = () => (
   <XStack items="center" justify="center" gap="$2" mt="$2">
-    <Leaf size={34} color="$primary" />
-    <Text color="$primary" fontSize="$10" fontWeight="700" letterSpacing={0.4}>
+    <Leaf size={34} color="$color8" />
+    <Text color="$color8" fontSize="$10" fontWeight="700" letterSpacing={0.4}>
       Michi
     </Text>
   </XStack>
@@ -38,9 +38,9 @@ export const HomepageScreen = () => {
           position="relative"
           overflow="hidden"
           rounded="$12"
-          bg="$strong"
+          bg="$color0"
           borderWidth={1}
-          borderColor="$secondary"
+          borderColor="$color2"
           minH={315}
           maxH={315}
           minW={315}
@@ -87,7 +87,7 @@ export const HomepageScreen = () => {
             ml={-39}
             minW={78}
             minH={78}
-            bg="$primaryHover"
+            bg="$color9"
             rounded="$8"
             items="center"
             justify="center"
@@ -108,7 +108,7 @@ export const HomepageScreen = () => {
 
           <Text
             text="center"
-            color="$primary"
+            color="$color8"
             maxW="$20"
             fontSize="$6"
             lineHeight="$6"
@@ -146,9 +146,9 @@ export const HomepageScreen = () => {
           </LinkButton>
         </YStack>
 
-        <Text color="$primary" fontSize="$4" text="center" px="$2">
+        <Text color="$color8" fontSize="$4" text="center" px="$2">
           By continuing, you agree to our{" "}
-          <Anchor asChild color="$primary">
+          <Anchor asChild color="$color8">
             <Link href="/terms" style={{ textDecoration: "underline" }}>
               Terms
             </Link>

@@ -49,7 +49,7 @@ export const GoalsScreen = () => {
           <View bg="$white3" px="$4" py="$2" rounded="$6">
             <Text color="$outlineColor">Active</Text>
           </View>
-          <Text color="$primary">Completed</Text>
+          <Text color="$color8">Completed</Text>
         </XStack>
       </YStack>
 
@@ -61,7 +61,7 @@ export const GoalsScreen = () => {
           borderWidth={1}
           borderColor="$borderColor"
         >
-          <Text color="$primary">Loading goals...</Text>
+          <Text color="$color8">Loading goals...</Text>
         </View>
       ) : null}
 
@@ -73,7 +73,7 @@ export const GoalsScreen = () => {
           borderWidth={1}
           borderColor="$borderColor"
         >
-          <Text color="$primary">
+          <Text color="$color8">
             {goalsErrorDetails instanceof Error
               ? goalsErrorDetails.message
               : "Failed to load goals"}
@@ -91,7 +91,7 @@ export const GoalsScreen = () => {
               borderWidth={1}
               borderColor="$borderColor"
             >
-              <Text color="$primary">No goals found.</Text>
+              <Text color="$color8">No goals found.</Text>
             </YStack>
           ) : null}
 
@@ -130,10 +130,10 @@ export const GoalsScreen = () => {
                     <Icon color="$outlineColor" size={30} />
                   </View>
                   <YStack gap="$1">
-                    <Text color="$text" fontWeight="bold">
+                    <Text color="$color11" fontWeight="bold">
                       {goal.title}
                     </Text>
-                    <Text color="$text">
+                    <Text color="$color11">
                       {progressData.completed} / {progressData.total} Tasks
                       Completed
                     </Text>
@@ -144,13 +144,13 @@ export const GoalsScreen = () => {
                   <View
                     minH={18}
                     rounded="$6"
-                    bg="$primaryHover"
+                    bg="$color9"
                     style={{ width: `${progressPercent}%` }}
                   />
                 </View>
 
                 <XStack items="center" justify="space-between">
-                  <Text color="$primary" fontStyle="italic">
+                  <Text color="$color8" fontStyle="italic">
                     {goal.description || "No description"}
                   </Text>
                   <View
@@ -161,7 +161,7 @@ export const GoalsScreen = () => {
                     px="$4"
                     py="$2"
                   >
-                    <Text color="$text">View Details</Text>
+                    <Text color="$color11">View Details</Text>
                   </View>
                 </XStack>
               </YStack>
@@ -171,7 +171,7 @@ export const GoalsScreen = () => {
       ) : null}
 
       <View
-        bg="$primaryHover"
+        bg="$color9"
         rounded="$10"
         py="$3"
         px="$4"
@@ -195,7 +195,7 @@ export const GoalsScreen = () => {
         minW={88}
         minH={88}
         rounded={44}
-        bg="$text"
+        bg="$color11"
         items="center"
         justify="center"
       >

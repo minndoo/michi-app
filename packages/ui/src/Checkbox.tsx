@@ -19,12 +19,10 @@ const CheckboxComponent = ({
   checked,
   ...props
 }: CheckboxProps) => {
-  const resolvedBackground = bg ?? (checked ? "$primary" : "transparent");
+  const resolvedBackground = bg ?? (checked ? "$color8" : "transparent");
 
   const resolvedBorderColor =
     borderColor ?? (checked ? "$outlineColor" : "$borderColor");
-
-  console.log("resolved", resolvedBackground, resolvedBorderColor, checked);
 
   return (
     <TamaguiCheckbox

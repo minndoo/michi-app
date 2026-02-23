@@ -21,7 +21,7 @@ export const TaskDetail = ({ taskId }: TaskDetailProps) => {
         p="$4"
       >
         <Text color="$outlineColor">TaskDetail</Text>
-        <Text color="$primary">Task ID: {taskId}</Text>
+        <Text color="$color8">Task ID: {taskId}</Text>
       </View>
 
       {/* TODO: Use LinkButton */}

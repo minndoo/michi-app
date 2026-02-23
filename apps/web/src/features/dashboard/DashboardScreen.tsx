@@ -85,10 +85,10 @@ export const DashboardScreen = () => {
   return (
     <YStack gap="$3">
       <YStack gap="$1.5" py="$2">
-        <H2 color="$text" fontWeight="700">
+        <H2 color="$color11" fontWeight="700">
           Good Morning, Sarah
         </H2>
-        <Text color="$primary">Here&apos;s to a positive day ahead.</Text>
+        <Text color="$color8">Here&apos;s to a positive day ahead.</Text>
       </YStack>
       <View
         bg="$white3"
@@ -98,14 +98,14 @@ export const DashboardScreen = () => {
         borderColor="$borderColor"
       >
         <XStack justify="space-between" items="center" mb="$2">
-          <Text color="$primary" fontWeight="600" letterSpacing={1}>
+          <Text color="$color8" fontWeight="600" letterSpacing={1}>
             TODAY&apos;S FOCUS
           </Text>
           <ChevronRight size={28} color="$outlineColor" />
         </XStack>
         <YStack gap="$1">
-          <H2 color="$text">Mindful Morning Routine</H2>
-          <Text color="$primary">Take 10 minutes for a mindful start.</Text>
+          <H2 color="$color11">Mindful Morning Routine</H2>
+          <Text color="$color8">Take 10 minutes for a mindful start.</Text>
         </YStack>
       </View>
 
@@ -115,15 +115,15 @@ export const DashboardScreen = () => {
         contentGap="$3"
       >
         {tasksLoading ? (
-          <Text color="$primary">Loading tasks...</Text>
+          <Text color="$color8">Loading tasks...</Text>
         ) : tasksError ? (
-          <Text color="$primary">
+          <Text color="$color8">
             {tasksErrorDetails instanceof Error
               ? tasksErrorDetails.message
               : "Failed to load tasks"}
           </Text>
         ) : tasks.length === 0 ? (
-          <Text color="$primary">No tasks found.</Text>
+          <Text color="$color8">No tasks found.</Text>
         ) : (
           <YStack gap="$3">
             {tasks.slice(0, 4).map((task) => {
@@ -140,7 +140,7 @@ export const DashboardScreen = () => {
                     }
                   />
                   <Text
-                    color={task.status === "DONE" ? "$tertiary" : "$text"}
+                    color={task.status === "DONE" ? "$color5" : "$color11"}
                     textDecorationLine={
                       task.status === "DONE" ? "line-through" : "none"
                     }
@@ -160,15 +160,15 @@ export const DashboardScreen = () => {
         viewAllAction={{ href: "/goals", actionLabel: "View All" }}
       >
         {goalsLoading ? (
-          <Text color="$primary">Loading goals...</Text>
+          <Text color="$color8">Loading goals...</Text>
         ) : goalsError ? (
-          <Text color="$primary">
+          <Text color="$color8">
             {goalsErrorDetails instanceof Error
               ? goalsErrorDetails.message
               : "Failed to load goals"}
           </Text>
         ) : goalsProgress.length === 0 ? (
-          <Text color="$primary">No goals found.</Text>
+          <Text color="$color8">No goals found.</Text>
         ) : (
           <YStack gap="$4">
             {goalsProgress.map(
@@ -177,19 +177,19 @@ export const DashboardScreen = () => {
                   <XStack justify="space-between" items="center">
                     <XStack items="center" gap="$2">
                       <Icon size={30} color="$outlineColor" />
-                      <Text color="$text">{title}</Text>
+                      <Text color="$color11">{title}</Text>
                     </XStack>
-                    <Text color="$primary">{progress}%</Text>
+                    <Text color="$color8">{progress}%</Text>
                   </XStack>
                   <View minH={16} rounded="$6" bg="$white3" overflow="hidden">
                     <View
                       minH={16}
-                      bg="$primaryHover"
+                      bg="$color9"
                       rounded="$6"
                       style={{ width: `${progress}%` }}
                     />
                   </View>
-                  <Text color="$primary">{subtitle}</Text>
+                  <Text color="$color8">{subtitle}</Text>
                 </YStack>
               ),
             )}
