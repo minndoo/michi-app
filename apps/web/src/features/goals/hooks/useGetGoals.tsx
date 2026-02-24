@@ -1,3 +1,7 @@
+import type { GoalStatus } from "@/lib/api/generated/model";
 import { useGetGoals as useGetGoalsBase } from "@/lib/api/generated/goals/goals";
 
-export const useGetGoals = () => useGetGoalsBase();
+export const useGetGoals = (status?: GoalStatus) =>
+  useGetGoalsBase({
+    status,
+  });

@@ -11,7 +11,7 @@ import swaggerUi from "swagger-ui-express";
 import { ValidateError } from "@tsoa/runtime";
 import { checkJwt } from "./middleware/checkJwt.js";
 import { corsMiddleware } from "./middleware/cors.js";
-import { syncUser } from "./middleware/syncUser.js";
+import { ensureUserExists } from "./middleware/syncUser.js";
 import { RegisterRoutes } from "./generated/routes.js";
 
 // Load environment variables
@@ -79,8 +79,8 @@ app.use((req: Request, res: Response, next) => {
   return checkJwt(req, res, next);
 });
 
-// Sync authenticated users to database
-app.use(syncUser);
+// Ensure authenticated users exist in database
+app.use(ensureUserExists);
 
 RegisterRoutes(app);
 

@@ -1,4 +1,5 @@
-import "./tamagui";
+// eslint-disable-next-line @typescript-eslint/triple-slash-reference
+/// <reference path="tamagui.d.ts" />
 
 // baseline components: all from tamagui
 export * from "tamagui";

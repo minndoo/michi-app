@@ -45,6 +45,33 @@ OpenAPI spec endpoints:
 - `bun lint` - Run ESLint
 - `bun check-types` - Run TypeScript type checking
 
+## Seeding
+
+- `bun run db:seed` seeds goals/tasks for users.
+- If Auth0 seed credentials are configured, it imports users from Auth0 Management API and upserts them in the local DB before seeding goals/tasks.
+- If Auth0 seed credentials are not configured, it seeds only for users already in the local DB.
+
+### Auth0-Backed Seed Setup
+
+Provide `AUTH0_DOMAIN` and one authentication method:
+
+- Static token:
+  - `AUTH0_MANAGEMENT_API_TOKEN`
+- M2M client credentials:
+  - `AUTH0_M2M_CLIENT_ID`
+  - `AUTH0_M2M_CLIENT_SECRET`
+  - Optional override: `AUTH0_MANAGEMENT_API_AUDIENCE` (defaults to `https://<AUTH0_DOMAIN>/api/v2/`)
+
+Required Auth0 permission:
+
+- Auth0 Management API scope `read:users`
+
+Seed behavior with Auth0 mode:
+
+- Fetches users from `/api/v2/users` with pagination
+- Upserts users into DB using Auth0 `user_id` as `auth0Id`
+- Then creates seed goals/tasks for synced users
+
 ## Authentication
 
 This API uses Auth0 JWT Bearer tokens for authentication. **All routes except `/health` require a valid access token** in the Authorization header:

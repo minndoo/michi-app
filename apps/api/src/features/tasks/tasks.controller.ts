@@ -13,21 +13,14 @@ import {
   SuccessResponse,
   Tags,
 } from "@tsoa/runtime";
+import { createHttpError } from "../../helpers/http.js";
 import {
-  tasksService,
   type CreateTaskInput,
   type TaskStatus,
   type TaskResponse,
   type UpdateTaskInput,
-} from "./tasks.service.js";
-
-type HttpError = Error & { status: number };
-
-const createHttpError = (status: number, message: string): HttpError => {
-  const error = new Error(message) as HttpError;
-  error.status = status;
-  return error;
-};
+} from "./tasks.types.js";
+import { tasksService } from "./tasks.service.js";
 
 const getUserId = (request: ExpressRequest): string => {
   const userId = request.user?.id;

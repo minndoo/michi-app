@@ -1,42 +1,25 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  FormDatePicker,
-  FormInput,
-  FormSelect,
-  FormTextArea,
-  type FormSelectOption,
-} from "@repo/form";
+import { FormDatePicker, FormInput, FormTextArea } from "@repo/form";
 import { Button, Spinner, Text, View, XStack, YStack } from "@repo/ui";
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { useGetGoals } from "@/features/goals/hooks/useGetGoals";
-import { taskFormSchema, type TaskFormValues } from "./schema";
+import { goalFormSchema, type GoalFormValues } from "./schema";
 
-export type TaskFormProps = {
-  defaultValues: TaskFormValues;
-  onSubmit: (values: TaskFormValues) => void;
+export type GoalFormProps = {
+  defaultValues: GoalFormValues;
+  onSubmit: (values: GoalFormValues) => void;
   isSubmitting?: boolean;
   submitLabel?: string;
 };
 
-export const TaskForm = ({
+export const GoalForm = ({
   defaultValues,
   onSubmit,
   isSubmitting = false,
-  submitLabel = "Save task",
-}: TaskFormProps) => {
-  const { data: goalsData, isLoading: isGoalsLoading } = useGetGoals();
-  const goalOptions = useMemo<FormSelectOption[]>(
-    () =>
-      (goalsData?.data ?? []).map((goal) => ({
-        label: goal.title,
-        value: goal.id,
-      })),
-    [goalsData?.data],
-  );
-
-  const { control, handleSubmit, reset } = useForm<TaskFormValues>({
-    resolver: zodResolver(taskFormSchema),
+  submitLabel = "Save goal",
+}: GoalFormProps) => {
+  const { control, handleSubmit, reset } = useForm<GoalFormValues>({
+    resolver: zodResolver(goalFormSchema),
     defaultValues,
   });
 
@@ -53,7 +36,7 @@ export const TaskForm = ({
         borderColor="$borderColor"
         p="$4"
       >
-        <Text color="$outlineColor">TaskForm</Text>
+        <Text color="$outlineColor">GoalForm</Text>
       </View>
 
       <YStack gap="$4" maxW="100%">
@@ -69,7 +52,7 @@ export const TaskForm = ({
             control={control}
             name="title"
             label="Title"
-            placeholder="Task title"
+            placeholder="Goal title"
             required
             grow={1}
           />
@@ -87,16 +70,7 @@ export const TaskForm = ({
           control={control}
           name="description"
           label="Description"
-          placeholder="Task description"
-        />
-        <FormSelect
-          control={control}
-          name="goalId"
-          label="Goal"
-          placeholder={isGoalsLoading ? "Loading goals..." : "Select goal"}
-          options={goalOptions}
-          emptyOptionLabel="No goal"
-          disabled={isGoalsLoading}
+          placeholder="Goal description"
         />
         <Button
           variant="outlined"

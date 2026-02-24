@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { H2, Text, View, XStack, YStack, Checkbox } from "@repo/ui";
+import { Checkbox, H2, Progress, Text, View, XStack, YStack } from "@repo/ui";
 import { Accessibility, BookOpen, ChevronRight } from "@repo/ui/icons";
 import {
   getGetTasksQueryKey,
@@ -35,22 +35,13 @@ export const DashboardScreen = () => {
   const goals = goalsData?.data ?? [];
 
   const goalsProgress = goals.map((goal, index) => {
-    const tasksForGoal = tasks.filter((task) => task.goalId === goal.id);
-    const completedTasks = tasksForGoal.filter(
-      (task) => task.status === "DONE",
-    ).length;
-    const totalTasks = tasksForGoal.length;
-    const progress =
-      totalTasks === 0 ? 0 : Math.round((completedTasks / totalTasks) * 100);
     const Icon = goalIcons[index % goalIcons.length] ?? Accessibility;
-
-    // TODO: Aggregate progress data on backend
 
     return {
       id: goal.id,
       title: goal.title,
-      subtitle: `${completedTasks} / ${totalTasks} tasks completed`,
-      progress,
+      subtitle: `${goal.completedTasks} / ${goal.totalTasks} tasks completed`,
+      progress: goal.progressPercentage,
       icon: Icon,
     };
   });
@@ -181,14 +172,9 @@ export const DashboardScreen = () => {
                     </XStack>
                     <Text color="$color8">{progress}%</Text>
                   </XStack>
-                  <View minH={16} rounded="$6" bg="$white3" overflow="hidden">
-                    <View
-                      minH={16}
-                      bg="$color9"
-                      rounded="$6"
-                      style={{ width: `${progress}%` }}
-                    />
-                  </View>
+                  <Progress value={progress} max={100} size="$2" bg="$white3">
+                    <Progress.Indicator bg="$color9" />
+                  </Progress>
                   <Text color="$color8">{subtitle}</Text>
                 </YStack>
               ),

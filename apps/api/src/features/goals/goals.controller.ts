@@ -7,25 +7,20 @@ import {
   Patch,
   Path,
   Post,
+  Query,
   Request,
   Route,
   SuccessResponse,
   Tags,
 } from "@tsoa/runtime";
+import { createHttpError } from "../../helpers/http.js";
 import {
-  goalsService,
   type CreateGoalInput,
+  type GoalStatus,
   type GoalResponse,
   type UpdateGoalInput,
-} from "./goals.service.js";
-
-type HttpError = Error & { status: number };
-
-const createHttpError = (status: number, message: string): HttpError => {
-  const error = new Error(message) as HttpError;
-  error.status = status;
-  return error;
-};
+} from "./goals.types.js";
+import { goalsService } from "./goals.service.js";
 
 const getUserId = (request: ExpressRequest): string => {
   const userId = request.user?.id;
@@ -44,9 +39,10 @@ export class GoalsController extends Controller {
   @OperationId("getGoals")
   public async getGoals(
     @Request() request: ExpressRequest,
+    @Query() status?: GoalStatus,
   ): Promise<GoalResponse[]> {
     const userId = getUserId(request);
-    return goalsService.getGoals({ userId });
+    return goalsService.getGoals({ userId, status });
   }
 
   @Get("{id}")
