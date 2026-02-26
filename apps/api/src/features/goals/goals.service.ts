@@ -1,9 +1,12 @@
 import { prisma } from "../../lib/prisma.js";
+import type { Prisma } from "../../generated/prisma/client.js";
 import { parseDueAt } from "../../helpers/date.js";
 import { createHttpError } from "../../helpers/http.js";
 import { GoalStatus } from "./goals.types.js";
 import type {
   CreateGoalParams,
+  GoalDetailResponse,
+  GoalLinkedTaskResponse,
   GetGoalsByIdParams,
   GetGoalsParams,
   GetGoalsProgressByIdsParams,
@@ -13,6 +16,9 @@ import type {
   SyncGoalsStatusParams,
   UpdateGoalParams,
 } from "./goals.types.js";
+
+// TODO: change the service to build up data from one shot queries for now
+// in order to reduce maintenance hell in the beginning
 
 const uniqueGoalIds = (goalIds: string[]): string[] =>
   Array.from(new Set(goalIds.filter(Boolean)));
@@ -210,6 +216,47 @@ const goalSelect = {
   updatedAt: true,
 } as const;
 
+type GoalLinkedTaskRecord = {
+  id: string;
+  title: string;
+  description: string | null;
+  status: "TODO" | "DONE";
+  completedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date | null;
+  dueAt: Date;
+  goalId: string | null;
+};
+
+const goalLinkedTaskSelect = {
+  id: true,
+  title: true,
+  description: true,
+  status: true,
+  completedAt: true,
+  createdAt: true,
+  updatedAt: true,
+  dueAt: true,
+  goalId: true,
+} as const;
+
+type GoalDetailRecord = GoalRecord & {
+  tasks: GoalLinkedTaskRecord[];
+};
+
+const goalDetailSelect = {
+  ...goalSelect,
+  tasks: {
+    select: goalLinkedTaskSelect,
+    orderBy: [
+      { status: "asc" },
+      { dueAt: "asc" },
+      { createdAt: "asc" },
+      { id: "asc" },
+    ],
+  },
+} satisfies Prisma.GoalSelect;
+
 const toGoalResponse = (
   goal: GoalRecord,
   goalProgress?: GoalProgress,
@@ -227,7 +274,19 @@ const toGoalResponse = (
   updatedAt: goal.updatedAt ? goal.updatedAt.toISOString() : null,
 });
 
-// TODO: Add Tasks into results of getGoalsById and updateGoal
+const toGoalLinkedTaskResponse = (
+  task: GoalLinkedTaskRecord,
+): GoalLinkedTaskResponse => ({
+  id: task.id,
+  title: task.title,
+  description: task.description,
+  status: task.status,
+  completedAt: task.completedAt ? task.completedAt.toISOString() : null,
+  createdAt: task.createdAt.toISOString(),
+  updatedAt: task.updatedAt ? task.updatedAt.toISOString() : null,
+  dueAt: task.dueAt.toISOString(),
+  goalId: task.goalId,
+});
 
 class GoalsService {
   async getGoals({ userId, status }: GetGoalsParams): Promise<GoalResponse[]> {
@@ -250,23 +309,44 @@ class GoalsService {
   async getGoalsById({
     userId,
     id,
-  }: GetGoalsByIdParams): Promise<GoalResponse> {
+  }: GetGoalsByIdParams): Promise<GoalDetailResponse> {
     const goal = await prisma.goal.findFirst({
       where: { id, userId },
-      select: goalSelect,
+      select: goalDetailSelect,
     });
 
     if (!goal) {
       throw createHttpError(404, "Goal not found");
     }
 
-    const goalsProgress = await getGoalsProgressByIds({
-      db: prisma,
-      userId,
-      goalIds: [goal.id],
-    });
+    const goalDetail = goal as GoalDetailRecord;
+    const totalTasks = goalDetail.tasks.length;
+    const completedTasks = goalDetail.tasks.filter(
+      (task) => task.status === GoalStatus.Done,
+    ).length;
+    const progressPercentage = getProgressPercentage(
+      completedTasks,
+      totalTasks,
+    );
 
-    return toGoalResponse(goal, goalsProgress.get(goal.id));
+    return {
+      id: goalDetail.id,
+      title: goalDetail.title,
+      description: goalDetail.description,
+      status: goalDetail.status,
+      completedTasks,
+      totalTasks,
+      progressPercentage,
+      completedAt: goalDetail.completedAt
+        ? goalDetail.completedAt.toISOString()
+        : null,
+      dueAt: goalDetail.dueAt.toISOString(),
+      createdAt: goalDetail.createdAt.toISOString(),
+      updatedAt: goalDetail.updatedAt
+        ? goalDetail.updatedAt.toISOString()
+        : null,
+      tasks: goalDetail.tasks.map(toGoalLinkedTaskResponse),
+    };
   }
 
   async createGoal({ userId, data }: CreateGoalParams): Promise<GoalResponse> {

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { syncGoalsStatus } from "../goals.service.js";
+import { prisma } from "../../../lib/prisma.js";
+import { goalsService, syncGoalsStatus } from "../goals.service.js";
 import { GoalStatus } from "../goals.types.js";
 
 type GroupedTaskCount = {
@@ -174,5 +175,84 @@ describe("syncGoalsStatus", () => {
 
     expect(groupBy).not.toHaveBeenCalled();
     expect(updateMany).not.toHaveBeenCalled();
+  });
+});
+
+describe("goalsService.getGoalsById", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns goal detail from a single goal query and computes progress from linked tasks", async () => {
+    const findFirstGoalSpy = vi
+      .spyOn(prisma.goal, "findFirst")
+      .mockResolvedValue({
+        id: "goal-1",
+        title: "Weekly Cardio",
+        description: "Cardio work",
+        status: GoalStatus.InProgress,
+        completedAt: null,
+        dueAt: new Date("2026-02-20T00:00:00.000Z"),
+        createdAt: new Date("2026-02-01T00:00:00.000Z"),
+        updatedAt: new Date("2026-02-10T00:00:00.000Z"),
+        tasks: [
+          {
+            id: "task-2",
+            title: "Morning Run",
+            description: null,
+            status: "TODO",
+            completedAt: null,
+            createdAt: new Date("2026-02-01T00:00:00.000Z"),
+            updatedAt: null,
+            dueAt: new Date("2026-02-18T00:00:00.000Z"),
+            goalId: "goal-1",
+          },
+          {
+            id: "task-1",
+            title: "HIIT Session",
+            description: null,
+            status: "DONE",
+            completedAt: new Date("2026-02-15T00:00:00.000Z"),
+            createdAt: new Date("2026-02-02T00:00:00.000Z"),
+            updatedAt: null,
+            dueAt: new Date("2026-02-16T00:00:00.000Z"),
+            goalId: "goal-1",
+          },
+        ],
+      } as never);
+
+    const groupBySpy = vi.spyOn(prisma.task, "groupBy");
+    const findManyTaskSpy = vi.spyOn(prisma.task, "findMany");
+
+    const result = await goalsService.getGoalsById({
+      userId: "user-1",
+      id: "goal-1",
+    });
+
+    expect(findFirstGoalSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "goal-1", userId: "user-1" },
+      }),
+    );
+    expect(groupBySpy).not.toHaveBeenCalled();
+    expect(findManyTaskSpy).not.toHaveBeenCalled();
+
+    expect(result.completedTasks).toBe(1);
+    expect(result.totalTasks).toBe(2);
+    expect(result.progressPercentage).toBe(50);
+    expect(result.tasks).toHaveLength(2);
+    expect(result.tasks[0]?.id).toBe("task-2");
+    expect(result.tasks[1]?.id).toBe("task-1");
+  });
+
+  it("throws 404 when goal does not exist", async () => {
+    vi.spyOn(prisma.goal, "findFirst").mockResolvedValue(null);
+
+    await expect(
+      goalsService.getGoalsById({
+        userId: "user-1",
+        id: "missing-goal",
+      }),
+    ).rejects.toThrow("Goal not found");
   });
 });

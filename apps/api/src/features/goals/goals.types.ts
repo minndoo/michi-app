@@ -85,3 +85,19 @@ export interface GoalResponse {
   createdAt: string;
   updatedAt: string | null;
 }
+
+export interface GoalLinkedTaskResponse {
+  id: string;
+  title: string;
+  description: string | null;
+  status: "TODO" | "DONE";
+  completedAt: string | null;
+  createdAt: string;
+  updatedAt: string | null;
+  dueAt: string;
+  goalId: string | null;
+}
+
+export interface GoalDetailResponse extends GoalResponse {
+  tasks: GoalLinkedTaskResponse[];
+}

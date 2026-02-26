@@ -16,6 +16,7 @@ import {
 import { createHttpError } from "../../helpers/http.js";
 import {
   type CreateGoalInput,
+  type GoalDetailResponse,
   type GoalStatus,
   type GoalResponse,
   type UpdateGoalInput,
@@ -50,7 +51,7 @@ export class GoalsController extends Controller {
   public async getGoalsById(
     @Request() request: ExpressRequest,
     @Path() id: string,
-  ): Promise<GoalResponse> {
+  ): Promise<GoalDetailResponse> {
     const userId = getUserId(request);
     return goalsService.getGoalsById({ userId, id });
   }
