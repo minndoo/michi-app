@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Text, View, YStack } from "@repo/ui";
 import type { TaskStatus } from "@/lib/api/generated/model";
 import { useGetTasks } from "../hooks/useGetTasks";
@@ -13,13 +12,14 @@ export interface TasksListProps {
 }
 
 export const TasksList = ({ status }: TasksListProps) => {
-  const router = useRouter();
   const [pendingIds, setPendingIds] = useState<Record<string, true>>({});
   const { data, isLoading, isError, error } = useGetTasks(status);
   const tasks = data?.data ?? [];
   const { mutateTaskStatus } = useUpdateTask();
 
   const onComplete = (taskId: string) => {
+    const currentTask = tasks.find((task) => task.id === taskId);
+
     setPendingIds((prev) => ({
       ...prev,
       [taskId]: true,
@@ -29,6 +29,7 @@ export const TasksList = ({ status }: TasksListProps) => {
       {
         id: taskId,
         status: "DONE",
+        goalId: currentTask?.goalId ?? null,
       },
       {
         onSettled: () => {
@@ -40,10 +41,6 @@ export const TasksList = ({ status }: TasksListProps) => {
         },
       },
     );
-  };
-
-  const onViewDetails = (taskId: string) => {
-    router.push(`/tasks/${taskId}`);
   };
 
   if (isLoading) {
@@ -98,7 +95,6 @@ export const TasksList = ({ status }: TasksListProps) => {
           task={task}
           isCompleting={Boolean(pendingIds[task.id])}
           onComplete={onComplete}
-          onViewDetails={onViewDetails}
         />
       ))}
     </YStack>

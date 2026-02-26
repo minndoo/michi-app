@@ -54,6 +54,8 @@ export const getGoalsProgressByIds = async ({
   userId,
   goalIds,
 }: GetGoalsProgressByIdsParams): Promise<Map<string, GoalProgress>> => {
+  // TODO: change the getGoals query to include all tasks properly with {select} object and aggregate the data there
+  // This is to reduce multiple db round trips
   const ids = uniqueGoalIds(goalIds);
   const progressMap = new Map<string, GoalProgress>();
 

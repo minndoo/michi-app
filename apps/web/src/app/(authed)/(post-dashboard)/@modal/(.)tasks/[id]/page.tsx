@@ -1,13 +1,11 @@
 import { TaskDetail } from "@/features/tasks/TaskDetail";
 import { TaskRouteModal } from "@/features/tasks/components/TaskRouteModal";
 
-type TaskDetailModalPageProps = {
+type TaskDetailPageProps = {
   params: Promise<{ id: string }>;
 };
 
-export default async function TaskDetailModalPage({
-  params,
-}: TaskDetailModalPageProps) {
+export default async function TaskDetailPage({ params }: TaskDetailPageProps) {
   const { id } = await params;
 
   return (

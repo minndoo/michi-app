@@ -7,7 +7,7 @@ type LinkButtonProps = NextLinkProps & {
   buttonProps?: Omit<ButtonPropsBase, "children">;
 };
 
-const ButtonFrame = styled(Button.Frame, {
+const ButtonFrame = styled(Button, {
   render: "div",
   role: undefined,
 });

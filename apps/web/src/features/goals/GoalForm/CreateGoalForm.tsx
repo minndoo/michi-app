@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCreateGoal } from "@/lib/api/generated/goals/goals";
-import { toIsoStartOfDay } from "@/helpers/date";
+import { toIsoCurrentUTCStartOfDay } from "@/helpers/date";
 import { navigateBackOrPush } from "@/helpers/browser/navigation";
 import { GoalForm } from "./GoalForm";
 import type { GoalFormValues } from "./schema";
@@ -32,7 +32,7 @@ export const CreateGoalForm = () => {
       data: {
         title: values.title,
         description: values.description || null,
-        dueAt: toIsoStartOfDay(values.dueAt),
+        dueAt: toIsoCurrentUTCStartOfDay(values.dueAt),
       },
     });
   };

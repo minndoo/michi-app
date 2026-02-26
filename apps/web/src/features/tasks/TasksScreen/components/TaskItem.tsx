@@ -2,21 +2,16 @@
 
 import { Button, H5, Spinner, Text, View, XStack, YStack } from "@repo/ui";
 import { BookOpenText, Check } from "@repo/ui/icons";
+import { LinkButton } from "@/components/LinkButton";
 import type { TaskResponse } from "@/lib/api/generated/model";
 
 export interface TaskItemProps {
   task: TaskResponse;
   isCompleting: boolean;
   onComplete: (taskId: string) => void;
-  onViewDetails: (taskId: string) => void;
 }
 
-export const TaskItem = ({
-  task,
-  isCompleting,
-  onComplete,
-  onViewDetails,
-}: TaskItemProps) => {
+export const TaskItem = ({ task, isCompleting, onComplete }: TaskItemProps) => {
   return (
     <YStack
       bg="$color4"
@@ -86,15 +81,16 @@ export const TaskItem = ({
             <Text color="inherit">Complete</Text>
           </Button>
         ) : null}
-        {/* TODO: Use LinkButton */}
-        <Button
-          flex={1}
-          variant="outlined"
-          disabled={isCompleting}
-          onPress={() => onViewDetails(task.id)}
+        <LinkButton
+          href={`/tasks/${task.id}`}
+          style={{ flex: 1 }}
+          buttonProps={{
+            variant: "outlined",
+            flex: 1,
+          }}
         >
           <Text color="inherit">View Details</Text>
-        </Button>
+        </LinkButton>
       </XStack>
     </YStack>
   );

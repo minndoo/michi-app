@@ -5,9 +5,14 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Checkbox, H2, Progress, Text, View, XStack, YStack } from "@repo/ui";
 import { Accessibility, BookOpen, ChevronRight } from "@repo/ui/icons";
 import {
+  getGetTaskByIdQueryKey,
   getGetTasksQueryKey,
   useUpdateTask,
 } from "@/lib/api/generated/tasks/tasks";
+import {
+  getGetGoalsByIdQueryKey,
+  getGetGoalsQueryKey,
+} from "@/lib/api/generated/goals/goals";
 import { useGetGoals } from "./hooks/useGetGoals";
 import { useGetTasks } from "./hooks/useGetTasks";
 import { Section } from "./components/Section";
@@ -46,27 +51,51 @@ export const DashboardScreen = () => {
     };
   });
 
-  const handleToggleTask = (taskId: string, status: "TODO" | "DONE") => {
+  const handleToggleTask = (task: {
+    id: string;
+    status: "TODO" | "DONE";
+    goalId: string | null;
+  }) => {
     setSavingTaskIds((prev) => ({
       ...prev,
-      [taskId]: true,
+      [task.id]: true,
     }));
+
     updateTaskMutation.mutate(
       {
-        id: taskId,
+        id: task.id,
         data: {
-          status: status === "DONE" ? "TODO" : "DONE",
+          status: task.status === "DONE" ? "TODO" : "DONE",
         },
       },
       {
+        onSuccess: (response) => {
+          void queryClient.invalidateQueries({
+            queryKey: getGetTasksQueryKey(),
+          });
+          void queryClient.invalidateQueries({
+            queryKey: getGetTaskByIdQueryKey(task.id),
+          });
+
+          void queryClient.invalidateQueries({
+            queryKey: getGetGoalsQueryKey(),
+          });
+          if (task.goalId) {
+            void queryClient.invalidateQueries({
+              queryKey: getGetGoalsByIdQueryKey(task.goalId),
+            });
+          }
+          if (response.data.goalId) {
+            void queryClient.invalidateQueries({
+              queryKey: getGetGoalsByIdQueryKey(response.data.goalId),
+            });
+          }
+        },
         onSettled: () => {
           setSavingTaskIds((prev) => {
             const next = { ...prev };
-            delete next[taskId];
+            delete next[task.id];
             return next;
-          });
-          void queryClient.invalidateQueries({
-            queryKey: getGetTasksQueryKey(),
           });
         },
       },
@@ -126,9 +155,7 @@ export const DashboardScreen = () => {
                     checked={isSaving || task.status === "DONE"}
                     loading={isSaving}
                     disabled={isSaving}
-                    onCheckedChange={() =>
-                      handleToggleTask(task.id, task.status)
-                    }
+                    onCheckedChange={() => handleToggleTask(task)}
                   />
                   <Text
                     color={task.status === "DONE" ? "$color5" : "$color11"}

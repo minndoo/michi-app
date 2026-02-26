@@ -3,6 +3,10 @@
 import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
+import {
+  getGetGoalsByIdQueryKey,
+  getGetGoalsQueryKey,
+} from "@/lib/api/generated/goals/goals";
 import { Text, YStack } from "@repo/ui";
 import {
   getGetTaskByIdQueryKey,
@@ -10,7 +14,7 @@ import {
   useGetTaskById,
   useUpdateTask,
 } from "@/lib/api/generated/tasks/tasks";
-import { toIsoStartOfDay } from "@/helpers/date";
+import { toIsoCurrentUTCStartOfDay } from "@/helpers/date";
 import { navigateBackOrPush } from "@/helpers/browser/navigation";
 import { TaskForm } from "./TaskForm";
 import type { TaskFormValues } from "./schema";
@@ -24,18 +28,7 @@ export const EditTaskForm = ({ taskId }: EditTaskFormProps) => {
   const queryClient = useQueryClient();
   const { data: taskData, isLoading, isError, error } = useGetTaskById(taskId);
 
-  const updateTaskMutation = useUpdateTask({
-    mutation: {
-      onSuccess: () => {
-        // TODO: Also invalidate goals connected to this query
-        void queryClient.invalidateQueries({ queryKey: getGetTasksQueryKey() });
-        void queryClient.invalidateQueries({
-          queryKey: getGetTaskByIdQueryKey(taskId),
-        });
-        navigateBackOrPush(router, "/tasks");
-      },
-    },
-  });
+  const updateTaskMutation = useUpdateTask();
 
   const defaultValues = useMemo<TaskFormValues>(() => {
     const task = taskData?.data;
@@ -57,15 +50,44 @@ export const EditTaskForm = ({ taskId }: EditTaskFormProps) => {
   }, [taskData?.data]);
 
   const handleSubmit = (values: TaskFormValues) => {
-    updateTaskMutation.mutate({
-      id: taskId,
-      data: {
-        title: values.title,
-        description: values.description || null,
-        goalId: values.goalId || null,
-        dueAt: toIsoStartOfDay(values.dueAt),
+    const previousGoalId = taskData?.data?.goalId;
+
+    updateTaskMutation.mutate(
+      {
+        id: taskId,
+        data: {
+          title: values.title,
+          description: values.description || null,
+          goalId: values.goalId || null,
+          dueAt: toIsoCurrentUTCStartOfDay(values.dueAt),
+        },
       },
-    });
+      {
+        onSuccess: (response) => {
+          void queryClient.invalidateQueries({
+            queryKey: getGetTasksQueryKey(),
+          });
+          void queryClient.invalidateQueries({
+            queryKey: getGetTaskByIdQueryKey(taskId),
+          });
+          void queryClient.invalidateQueries({
+            queryKey: getGetGoalsQueryKey(),
+          });
+          if (previousGoalId) {
+            void queryClient.invalidateQueries({
+              queryKey: getGetGoalsByIdQueryKey(previousGoalId),
+            });
+          }
+          if (response.data.goalId) {
+            void queryClient.invalidateQueries({
+              queryKey: getGetGoalsByIdQueryKey(response.data.goalId),
+            });
+          }
+
+          navigateBackOrPush(router, "/tasks");
+        },
+      },
+    );
   };
 
   if (isLoading) {

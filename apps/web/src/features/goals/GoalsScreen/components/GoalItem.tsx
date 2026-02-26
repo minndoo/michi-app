@@ -1,12 +1,12 @@
 "use client";
 
-import { Button, H5, Progress, Text, View, XStack, YStack } from "@repo/ui";
+import { H5, Progress, Text, View, XStack, YStack } from "@repo/ui";
 import { Check, Dumbbell } from "@repo/ui/icons";
+import { LinkButton } from "@/components/LinkButton";
 import type { GoalResponse } from "@/lib/api/generated/model";
 
 export interface GoalItemProps {
   goal: GoalResponse;
-  onViewDetails: (goalId: string) => void;
 }
 
 const getStatusLabel = (status: GoalResponse["status"]) => {
@@ -17,7 +17,7 @@ const getStatusLabel = (status: GoalResponse["status"]) => {
   return status;
 };
 
-export const GoalItem = ({ goal, onViewDetails }: GoalItemProps) => {
+export const GoalItem = ({ goal }: GoalItemProps) => {
   return (
     <YStack
       bg="$color4"
@@ -78,9 +78,14 @@ export const GoalItem = ({ goal, onViewDetails }: GoalItemProps) => {
         <Text color="$color8" fontSize="$3" lineHeight="$3" flex={1}>
           {goal.description || "No description"}
         </Text>
-        <Button variant="outlined" onPress={() => onViewDetails(goal.id)}>
+        <LinkButton
+          href={`/goals/${goal.id}`}
+          buttonProps={{
+            variant: "outlined",
+          }}
+        >
           <Text color="inherit">View Details</Text>
-        </Button>
+        </LinkButton>
       </XStack>
     </YStack>
   );

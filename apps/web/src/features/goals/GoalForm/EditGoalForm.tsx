@@ -9,7 +9,7 @@ import {
   useGetGoalsById,
   useUpdateGoal,
 } from "@/lib/api/generated/goals/goals";
-import { toIsoStartOfDay } from "@/helpers/date";
+import { toIsoCurrentUTCStartOfDay } from "@/helpers/date";
 import { navigateBackOrPush } from "@/helpers/browser/navigation";
 import { GoalForm } from "./GoalForm";
 import type { GoalFormValues } from "./schema";
@@ -58,7 +58,7 @@ export const EditGoalForm = ({ goalId }: EditGoalFormProps) => {
       data: {
         title: values.title,
         description: values.description || null,
-        dueAt: toIsoStartOfDay(values.dueAt),
+        dueAt: toIsoCurrentUTCStartOfDay(values.dueAt),
       },
     });
   };
