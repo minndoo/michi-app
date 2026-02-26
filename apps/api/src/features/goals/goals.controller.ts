@@ -17,6 +17,7 @@ import { createHttpError } from "../../helpers/http.js";
 import {
   type CreateGoalInput,
   type GoalDetailResponse,
+  type GoalOrder,
   type GoalStatus,
   type GoalResponse,
   type UpdateGoalInput,
@@ -36,14 +37,20 @@ const getUserId = (request: ExpressRequest): string => {
 @Route("goals")
 @Tags("Goals")
 export class GoalsController extends Controller {
+  /**
+   * Returns goals for the authenticated user.
+   * @param status Optional status filter.
+   * @param order Optional ordering filter: `Recent` (updatedAt desc) or `Relevant` (dueAt asc).
+   */
   @Get()
   @OperationId("getGoals")
   public async getGoals(
     @Request() request: ExpressRequest,
     @Query() status?: GoalStatus,
+    @Query() order?: GoalOrder,
   ): Promise<GoalResponse[]> {
     const userId = getUserId(request);
-    return goalsService.getGoals({ userId, status });
+    return goalsService.getGoals({ userId, status, order });
   }
 
   @Get("{id}")

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { prisma } from "../../../lib/prisma.js";
 import { goalsService, syncGoalsStatus } from "../goals.service.js";
-import { GoalStatus } from "../goals.types.js";
+import { GoalOrder, GoalStatus } from "../goals.types.js";
 
 type GroupedTaskCount = {
   goalId: string | null;
@@ -175,6 +175,53 @@ describe("syncGoalsStatus", () => {
 
     expect(groupBy).not.toHaveBeenCalled();
     expect(updateMany).not.toHaveBeenCalled();
+  });
+});
+
+describe("goalsService.getGoals ordering", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("uses Recent ordering by default", async () => {
+    const findManyGoalSpy = vi
+      .spyOn(prisma.goal, "findMany")
+      .mockResolvedValue([]);
+    const groupBySpy = vi.spyOn(prisma.task, "groupBy").mockResolvedValue([]);
+
+    await goalsService.getGoals({
+      userId: "user-1",
+      status: GoalStatus.Todo,
+    });
+
+    expect(findManyGoalSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { userId: "user-1", status: GoalStatus.Todo },
+        orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
+      }),
+    );
+    expect(groupBySpy).not.toHaveBeenCalled();
+  });
+
+  it("uses Relevant ordering when requested", async () => {
+    const findManyGoalSpy = vi
+      .spyOn(prisma.goal, "findMany")
+      .mockResolvedValue([]);
+    const groupBySpy = vi.spyOn(prisma.task, "groupBy").mockResolvedValue([]);
+
+    await goalsService.getGoals({
+      userId: "user-1",
+      status: GoalStatus.Todo,
+      order: GoalOrder.Relevant,
+    });
+
+    expect(findManyGoalSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { userId: "user-1", status: GoalStatus.Todo },
+        orderBy: [{ dueAt: "asc" }, { id: "asc" }],
+      }),
+    );
+    expect(groupBySpy).not.toHaveBeenCalled();
   });
 });
 

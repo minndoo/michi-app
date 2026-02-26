@@ -39,6 +39,12 @@ export const config = [
     },
   },
   {
+    files: ["**/*.ts", "**/*.tsx"],
+    rules: {
+      "no-unused-vars": "off",
+    },
+  },
+  {
     ignores: ["dist/**", ".tamagui", ".tamagui/**"],
   },
 ];

@@ -16,6 +16,7 @@ import {
 import { createHttpError } from "../../helpers/http.js";
 import {
   type CreateTaskInput,
+  type TaskOrder,
   type TaskStatus,
   type TaskResponse,
   type UpdateTaskInput,
@@ -35,14 +36,20 @@ const getUserId = (request: ExpressRequest): string => {
 @Route("tasks")
 @Tags("Tasks")
 export class TasksController extends Controller {
+  /**
+   * Returns tasks for the authenticated user.
+   * @param status Optional status filter.
+   * @param order Optional ordering filter: `Recent` (updatedAt desc) or `Relevant` (dueAt asc).
+   */
   @Get()
   @OperationId("getTasks")
   public async getTasks(
     @Request() request: ExpressRequest,
     @Query() status?: TaskStatus,
+    @Query() order?: TaskOrder,
   ): Promise<TaskResponse[]> {
     const userId = getUserId(request);
-    return tasksService.getTasks({ userId, status });
+    return tasksService.getTasks({ userId, status, order });
   }
 
   @Get("{id}")

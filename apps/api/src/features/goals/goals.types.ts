@@ -1,12 +1,19 @@
 import type { Prisma, PrismaClient } from "../../generated/prisma/client.js";
+import type { GoalStatus as PrismaGoalStatus } from "../../generated/prisma/client.js";
+import type { TaskStatus } from "../tasks/tasks.types.js";
 
-export const GoalStatus = {
-  Todo: "TODO",
-  InProgress: "INPROGRESS",
-  Done: "DONE",
-} as const;
+/** Goal lifecycle status. */
+export enum GoalStatus {
+  Todo = "TODO",
+  InProgress = "INPROGRESS",
+  Done = "DONE",
+}
 
-export type GoalStatus = (typeof GoalStatus)[keyof typeof GoalStatus];
+/** Goal ordering strategy for list endpoints. */
+export enum GoalOrder {
+  Recent = "Recent",
+  Relevant = "Relevant",
+}
 
 export interface GoalProgress {
   status: GoalStatus;
@@ -43,6 +50,7 @@ export interface UpdateGoalInput {
 export interface GetGoalsParams {
   userId: string;
   status?: GoalStatus;
+  order?: GoalOrder;
 }
 
 export interface GetGoalsByIdParams {
@@ -65,7 +73,7 @@ export interface GoalRecord {
   id: string;
   title: string;
   description: string | null;
-  status: GoalStatus;
+  status: PrismaGoalStatus;
   completedAt: Date | null;
   dueAt: Date;
   createdAt: Date;
@@ -90,7 +98,7 @@ export interface GoalLinkedTaskResponse {
   id: string;
   title: string;
   description: string | null;
-  status: "TODO" | "DONE";
+  status: TaskStatus;
   completedAt: string | null;
   createdAt: string;
   updatedAt: string | null;

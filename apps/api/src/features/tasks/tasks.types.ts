@@ -1,9 +1,16 @@
-export const TaskStatus = {
-  Todo: "TODO",
-  Done: "DONE",
-} as const;
+import type { TaskStatus as PrismaTaskStatus } from "../../generated/prisma/client.js";
 
-export type TaskStatus = (typeof TaskStatus)[keyof typeof TaskStatus];
+/** Task lifecycle status. */
+export enum TaskStatus {
+  Todo = "TODO",
+  Done = "DONE",
+}
+
+/** Task ordering strategy for list endpoints. */
+export enum TaskOrder {
+  Recent = "Recent",
+  Relevant = "Relevant",
+}
 
 export interface CreateTaskInput {
   title: string;
@@ -23,6 +30,7 @@ export interface UpdateTaskInput {
 export interface GetTasksParams {
   userId: string;
   status?: TaskStatus;
+  order?: TaskOrder;
 }
 
 export interface GetTaskByIdParams {
@@ -45,7 +53,7 @@ export interface TaskRecord {
   id: string;
   title: string;
   description: string | null;
-  status: TaskStatus;
+  status: PrismaTaskStatus;
   completedAt: Date | null;
   createdAt: Date;
   updatedAt: Date | null;

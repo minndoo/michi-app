@@ -2,7 +2,7 @@ import { prisma } from "../../lib/prisma.js";
 import { parseDueAt } from "../../helpers/date.js";
 import { createHttpError } from "../../helpers/http.js";
 import { syncGoalsStatus } from "../goals/goals.service.js";
-import { TaskStatus } from "./tasks.types.js";
+import { TaskOrder, TaskStatus } from "./tasks.types.js";
 import type {
   CreateTaskParams,
   GetTaskByIdParams,
@@ -28,7 +28,7 @@ const toTaskResponse = (task: TaskRecord): TaskResponse => ({
   id: task.id,
   title: task.title,
   description: task.description,
-  status: task.status,
+  status: task.status as TaskStatus,
   completedAt: task.completedAt ? task.completedAt.toISOString() : null,
   createdAt: task.createdAt.toISOString(),
   updatedAt: task.updatedAt ? task.updatedAt.toISOString() : null,
@@ -37,12 +37,23 @@ const toTaskResponse = (task: TaskRecord): TaskResponse => ({
 });
 
 class TasksService {
-  async getTasks({ userId, status }: GetTasksParams): Promise<TaskResponse[]> {
+  async getTasks({
+    userId,
+    status,
+    order,
+  }: GetTasksParams): Promise<TaskResponse[]> {
+    const effectiveOrder = order ?? TaskOrder.Recent;
+    const orderBy =
+      effectiveOrder === TaskOrder.Relevant
+        ? [{ dueAt: "asc" as const }, { id: "asc" as const }]
+        : [{ updatedAt: "desc" as const }, { id: "asc" as const }];
+
     const tasks = await prisma.task.findMany({
       where: {
         userId,
         status,
       },
+      orderBy,
       select: taskSelect,
     });
 

@@ -1,8 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Text, View, YStack } from "@repo/ui";
-import type { TaskStatus } from "@/lib/api/generated/model";
+import { Select, Text, View, XStack, YStack } from "@repo/ui";
+import { ChevronDown } from "@repo/ui/icons";
+import {
+  TaskOrder,
+  type GetTasksParams,
+  type TaskStatus,
+} from "@/lib/api/generated/model";
 import { useGetTasks } from "../hooks/useGetTasks";
 import { useUpdateTask } from "../hooks/useUpdateTask";
 import { TaskItem } from "./TaskItem";
@@ -11,9 +16,17 @@ export interface TasksListProps {
   status: TaskStatus;
 }
 
+type TaskListOrder = NonNullable<GetTasksParams["order"]>;
+
+const ORDER_OPTIONS: { label: string; value: TaskListOrder }[] = [
+  { label: "Recent", value: TaskOrder.Recent },
+  { label: "Relevant", value: TaskOrder.Relevant },
+];
+
 export const TasksList = ({ status }: TasksListProps) => {
   const [pendingIds, setPendingIds] = useState<Record<string, true>>({});
-  const { data, isLoading, isError, error } = useGetTasks(status);
+  const [order, setOrder] = useState<TaskListOrder>(TaskOrder.Recent);
+  const { data, isLoading, isError, error } = useGetTasks(status, order);
   const tasks = data?.data ?? [];
   const { mutateTaskStatus } = useUpdateTask();
 
@@ -43,52 +56,109 @@ export const TasksList = ({ status }: TasksListProps) => {
     );
   };
 
+  const orderSelect = (
+    <XStack justify="flex-end">
+      <Select
+        value={order}
+        onValueChange={(nextValue) => setOrder(nextValue as TaskListOrder)}
+      >
+        <Select.Trigger
+          iconAfter={ChevronDown}
+          borderRadius={9}
+          borderWidth={1}
+          borderColor="$borderColor"
+          backgroundColor="$background"
+          minW={120}
+        >
+          <Select.Value placeholder="Order" />
+        </Select.Trigger>
+        <Select.Content zIndex={200000}>
+          <Select.Viewport
+            background="$background"
+            borderWidth={1}
+            borderColor="$borderColor"
+            overflow="hidden"
+            style={{ borderRadius: 9 }}
+          >
+            {ORDER_OPTIONS.map((option, index) => (
+              <Select.Item
+                key={option.value}
+                index={index}
+                value={option.value}
+                borderTopWidth={index === 0 ? 0 : 1}
+                borderColor="$borderColor"
+                style={{
+                  paddingTop: 10,
+                  paddingBottom: 10,
+                  paddingLeft: 13,
+                  paddingRight: 13,
+                }}
+              >
+                <Select.ItemText>{option.label}</Select.ItemText>
+              </Select.Item>
+            ))}
+          </Select.Viewport>
+        </Select.Content>
+      </Select>
+    </XStack>
+  );
+
   if (isLoading) {
     return (
-      <View
-        bg="$white3"
-        rounded="$10"
-        borderWidth={1}
-        borderColor="$borderColor"
-        p="$4"
-      >
-        <Text color="$color8">Loading tasks...</Text>
-      </View>
+      <YStack gap="$3" grow={1}>
+        {orderSelect}
+        <View
+          bg="$white3"
+          rounded="$10"
+          borderWidth={1}
+          borderColor="$borderColor"
+          p="$4"
+        >
+          <Text color="$color8">Loading tasks...</Text>
+        </View>
+      </YStack>
     );
   }
 
   if (isError) {
     return (
-      <View
-        bg="$white3"
-        rounded="$10"
-        borderWidth={1}
-        borderColor="$borderColor"
-        p="$4"
-      >
-        <Text color="$color8">
-          {error instanceof Error ? error.message : "Failed to load tasks"}
-        </Text>
-      </View>
+      <YStack gap="$3" grow={1}>
+        {orderSelect}
+        <View
+          bg="$white3"
+          rounded="$10"
+          borderWidth={1}
+          borderColor="$borderColor"
+          p="$4"
+        >
+          <Text color="$color8">
+            {error instanceof Error ? error.message : "Failed to load tasks"}
+          </Text>
+        </View>
+      </YStack>
     );
   }
 
   if (tasks.length === 0) {
     return (
-      <View
-        bg="$white3"
-        rounded="$10"
-        borderWidth={1}
-        borderColor="$borderColor"
-        p="$4"
-      >
-        <Text color="$color8">No tasks found.</Text>
-      </View>
+      <YStack gap="$3" grow={1}>
+        {orderSelect}
+        <View
+          bg="$white3"
+          rounded="$10"
+          borderWidth={1}
+          borderColor="$borderColor"
+          p="$4"
+        >
+          <Text color="$color8">No tasks found.</Text>
+        </View>
+      </YStack>
     );
   }
 
   return (
     <YStack gap="$3" grow={1}>
+      {orderSelect}
       {tasks.map((task) => (
         <TaskItem
           key={task.id}

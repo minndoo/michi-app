@@ -1,8 +1,12 @@
 import { prisma } from "../../lib/prisma.js";
-import type { Prisma } from "../../generated/prisma/client.js";
+import type {
+  Prisma,
+  TaskStatus as PrismaTaskStatus,
+} from "../../generated/prisma/client.js";
 import { parseDueAt } from "../../helpers/date.js";
 import { createHttpError } from "../../helpers/http.js";
-import { GoalStatus } from "./goals.types.js";
+import { TaskStatus } from "../tasks/tasks.types.js";
+import { GoalOrder, GoalStatus } from "./goals.types.js";
 import type {
   CreateGoalParams,
   GoalDetailResponse,
@@ -100,7 +104,7 @@ export const getGoalsProgressByIds = async ({
 
     currentCounts.totalTasks += groupedTaskCount._count._all;
 
-    if (groupedTaskCount.status === GoalStatus.Done) {
+    if (groupedTaskCount.status === "DONE") {
       currentCounts.completedTasks += groupedTaskCount._count._all;
     }
   }
@@ -222,7 +226,7 @@ type GoalLinkedTaskRecord = {
   id: string;
   title: string;
   description: string | null;
-  status: "TODO" | "DONE";
+  status: PrismaTaskStatus;
   completedAt: Date | null;
   createdAt: Date;
   updatedAt: Date | null;
@@ -266,7 +270,7 @@ const toGoalResponse = (
   id: goal.id,
   title: goal.title,
   description: goal.description,
-  status: goal.status,
+  status: goal.status as GoalStatus,
   completedTasks: goalProgress?.completedTasks ?? 0,
   totalTasks: goalProgress?.totalTasks ?? 0,
   progressPercentage: goalProgress?.progressPercentage ?? 0,
@@ -282,7 +286,7 @@ const toGoalLinkedTaskResponse = (
   id: task.id,
   title: task.title,
   description: task.description,
-  status: task.status,
+  status: task.status as TaskStatus,
   completedAt: task.completedAt ? task.completedAt.toISOString() : null,
   createdAt: task.createdAt.toISOString(),
   updatedAt: task.updatedAt ? task.updatedAt.toISOString() : null,
@@ -291,9 +295,20 @@ const toGoalLinkedTaskResponse = (
 });
 
 class GoalsService {
-  async getGoals({ userId, status }: GetGoalsParams): Promise<GoalResponse[]> {
+  async getGoals({
+    userId,
+    status,
+    order,
+  }: GetGoalsParams): Promise<GoalResponse[]> {
+    const effectiveOrder = order ?? GoalOrder.Recent;
+    const orderBy =
+      effectiveOrder === GoalOrder.Relevant
+        ? [{ dueAt: "asc" as const }, { id: "asc" as const }]
+        : [{ updatedAt: "desc" as const }, { id: "asc" as const }];
+
     const goals = await prisma.goal.findMany({
       where: { userId, status },
+      orderBy,
       select: goalSelect,
     });
 
@@ -324,7 +339,7 @@ class GoalsService {
     const goalDetail = goal as GoalDetailRecord;
     const totalTasks = goalDetail.tasks.length;
     const completedTasks = goalDetail.tasks.filter(
-      (task) => task.status === GoalStatus.Done,
+      (task) => task.status === "DONE",
     ).length;
     const progressPercentage = getProgressPercentage(
       completedTasks,
@@ -335,7 +350,7 @@ class GoalsService {
       id: goalDetail.id,
       title: goalDetail.title,
       description: goalDetail.description,
-      status: goalDetail.status,
+      status: goalDetail.status as GoalStatus,
       completedTasks,
       totalTasks,
       progressPercentage,
