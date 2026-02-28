@@ -10,9 +10,13 @@ import {
   Tags,
 } from "@tsoa/runtime";
 import { createHttpError } from "../../helpers/http.js";
-import { agentMessageInputSchema } from "./agent.schemas.js";
 import { agentService } from "./agent.service.js";
-import type { AgentMessageInput, AgentMessageResponse } from "./agent.types.js";
+import type {
+  AgentMessageInput,
+  AgentMessageResponse,
+  AgentPlanGoalInput,
+  AgentPlanGoalResponse,
+} from "./agent.types.js";
 
 const getUserId = (request: ExpressRequest): string => {
   const userId = request.user?.id;
@@ -33,16 +37,29 @@ export class AgentController extends Controller {
     @Request() request: ExpressRequest,
     @Body() body: AgentMessageInput,
   ): Promise<AgentMessageResponse> {
-    const parsedBody = agentMessageInputSchema.safeParse(body);
-
-    if (!parsedBody.success) {
-      throw createHttpError(422, "Validation Failed");
-    }
-
     const userId = getUserId(request);
 
     try {
-      return await agentService.runMessage(userId, parsedBody.data);
+      return await agentService.runMessage(userId, body);
+    } catch (error) {
+      if (error instanceof AiEngineUnavailableError) {
+        throw createHttpError(503, "Agent service temporarily unavailable");
+      }
+
+      throw error;
+    }
+  }
+
+  @Post("plan-goal")
+  @OperationId("postAgentPlanGoal")
+  public async postAgentPlanGoal(
+    @Request() request: ExpressRequest,
+    @Body() body: AgentPlanGoalInput,
+  ): Promise<AgentPlanGoalResponse> {
+    const userId = getUserId(request);
+
+    try {
+      return await agentService.planGoal(userId, body);
     } catch (error) {
       if (error instanceof AiEngineUnavailableError) {
         throw createHttpError(503, "Agent service temporarily unavailable");

@@ -11,6 +11,7 @@ const createRouterState = (
   threadId: "thread-1",
   userId: "user-1",
   input: "Plan my fitness goal",
+  userGoalPlanInput: null,
   intent: "refuse",
   response: "refuse",
   plannerAction: null,
@@ -64,7 +65,6 @@ describe("AiEngine", () => {
 
     const result = await engine.invokeRouter({
       input: "show tasks",
-      threadId: "thread-1",
       userId: "user-1",
     });
 
@@ -73,6 +73,19 @@ describe("AiEngine", () => {
       response: "show_tasks",
     });
     expect(routerWorkflow.invoke).toHaveBeenCalledTimes(1);
+    expect(routerWorkflow.invoke).toHaveBeenCalledWith(
+      expect.objectContaining({
+        threadId: "user-1",
+        input: "show tasks",
+        userGoalPlanInput: null,
+      }),
+      {
+        configurable: {
+          checkpoint_ns: "user-1",
+          thread_id: "user-1",
+        },
+      },
+    );
   });
 
   it("logs validated plan output on successful plan_goal", async () => {
@@ -102,7 +115,6 @@ describe("AiEngine", () => {
 
     const result = await engine.invokeRouter({
       input: "Plan my 10k training",
-      threadId: "thread-1",
       userId: "user-1",
     });
 
@@ -110,6 +122,15 @@ describe("AiEngine", () => {
       routedIntent: "plan_goal",
       response: 'Created a plan for "Run a 10k" with 2 tasks.',
       plannerAction: "create_plan",
+      plan: {
+        goal: {
+          title: "Run a 10k",
+        },
+        tasks: [
+          { title: "Run three times this week" },
+          { title: "Add one long run on Saturday" },
+        ],
+      },
     });
     expect(consoleLogSpy).toHaveBeenCalledWith(
       "AI engine plan_goal success",
@@ -127,10 +148,108 @@ describe("AiEngine", () => {
           null,
           2,
         ),
-        threadId: "thread-1",
+        threadId: "user-1",
         userId: "user-1",
       }),
     );
+  });
+
+  it("returns structured plans from planGoal", async () => {
+    const routerWorkflow: RouterWorkflow = {
+      invoke: vi.fn().mockResolvedValue(
+        createRouterState({
+          intent: "plan_goal",
+          response: 'Created a plan for "Run a 10k" with 2 tasks.',
+          plannerAction: "create_plan",
+          plan: {
+            goal: {
+              title: "Run a 10k",
+            },
+            tasks: [
+              { title: "Run three times this week" },
+              { title: "Add one long run on Saturday" },
+            ],
+          },
+        }),
+      ),
+    };
+
+    const engine = new AiEngine({
+      routerWorkflow,
+    });
+
+    const result = await engine.planGoal({
+      userId: "user-1",
+      userGoalPlanInput: {
+        goal: "Run a 10k",
+        dueDate: "2026-03-15T00:00:00.000Z",
+        startingPoint: "I can run 3km right now.",
+      },
+    });
+
+    expect(result).toEqual({
+      routedIntent: "plan_goal",
+      response: 'Created a plan for "Run a 10k" with 2 tasks.',
+      plannerAction: "create_plan",
+      plan: {
+        goal: {
+          title: "Run a 10k",
+        },
+        tasks: [
+          { title: "Run three times this week" },
+          { title: "Add one long run on Saturday" },
+        ],
+      },
+    });
+    expect(routerWorkflow.invoke).toHaveBeenCalledWith(
+      expect.objectContaining({
+        threadId: "user-1",
+        input: "Run a 10k",
+        userGoalPlanInput: {
+          goal: "Run a 10k",
+          dueDate: "2026-03-15T00:00:00.000Z",
+          startingPoint: "I can run 3km right now.",
+        },
+      }),
+      {
+        configurable: {
+          checkpoint_ns: "user-1",
+          thread_id: "user-1",
+        },
+      },
+    );
+  });
+
+  it("omits plan data from refused planGoal responses", async () => {
+    const routerWorkflow: RouterWorkflow = {
+      invoke: vi.fn().mockResolvedValue(
+        createRouterState({
+          intent: "plan_goal",
+          response: "I couldn't create a plan from that request.",
+          plannerAction: "refuse_plan",
+          plan: null,
+        }),
+      ),
+    };
+
+    const engine = new AiEngine({
+      routerWorkflow,
+    });
+
+    const result = await engine.planGoal({
+      userId: "user-1",
+      userGoalPlanInput: {
+        goal: "Run a 10k",
+        dueDate: "2026-03-15T00:00:00.000Z",
+        startingPoint: "I can run 3km right now.",
+      },
+    });
+
+    expect(result).toEqual({
+      routedIntent: "plan_goal",
+      response: "I couldn't create a plan from that request.",
+      plannerAction: "refuse_plan",
+    });
   });
 
   it("logs refusal output on refused plan_goal results", async () => {
@@ -151,7 +270,6 @@ describe("AiEngine", () => {
 
     const result = await engine.invokeRouter({
       input: "Do something vague",
-      threadId: "thread-1",
       userId: "user-1",
     });
 
@@ -165,7 +283,7 @@ describe("AiEngine", () => {
       expect.objectContaining({
         plannerAction: "refuse_plan",
         response: "I couldn't create a plan from that request.",
-        threadId: "thread-1",
+        threadId: "user-1",
         userId: "user-1",
       }),
     );
@@ -191,12 +309,10 @@ describe("AiEngine", () => {
 
     const firstRequest = engine.invokeRouter({
       input: "show tasks",
-      threadId: "thread-1",
       userId: "user-1",
     });
     const secondRequest = engine.invokeRouter({
       input: "show tasks",
-      threadId: "thread-2",
       userId: "user-2",
     });
 
@@ -262,7 +378,7 @@ describe("AiEngine", () => {
       "AI engine initialization failed",
       expect.objectContaining({
         error: "redis offline",
-        threadId: "thread-1",
+        threadId: "user-1",
         userId: "user-1",
       }),
     );

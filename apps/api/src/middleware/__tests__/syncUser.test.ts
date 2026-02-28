@@ -19,7 +19,7 @@ const mockedCreate = vi.mocked(prisma.user.create);
 const createReq = (payload?: Record<string, unknown>) =>
   ({
     auth: payload ? { payload } : undefined,
-  }) as Request;
+  }) as unknown as Request;
 
 const createRes = () => ({}) as Response;
 

@@ -17,11 +17,47 @@ export interface AgentMessageInput {
   message: string;
 }
 
+export interface AgentPlanGoalInput {
+  goal: string;
+  dueDate: string;
+  startingPoint: string;
+}
+
+export interface UserGoalPlanInput {
+  goal: string;
+  dueDate: string;
+  startingPoint: string;
+}
+
+export interface AgentPlannedGoal {
+  title: string;
+  description?: string | null;
+  dueAt?: string | null;
+}
+
+export interface AgentPlannedTask {
+  title: string;
+  description?: string | null;
+  dueAt?: string | null;
+}
+
+export interface AgentPlannedGoalWithTasks {
+  goal: AgentPlannedGoal;
+  tasks: AgentPlannedTask[];
+}
+
 export interface AgentMessageResponse {
   threadId: string;
   routedIntent: RoutedIntent;
   response: string;
   plannerAction?: PlannerAction;
+}
+
+export interface AgentPlanGoalResponse {
+  routedIntent: RoutedIntent;
+  response: string;
+  plannerAction?: PlannerAction;
+  plan?: AgentPlannedGoalWithTasks;
 }
 
 export interface AgentEngineInput extends AgentMessageInput {
@@ -32,4 +68,5 @@ export interface AgentEngineResult {
   routedIntent: RoutedIntent;
   response: string;
   plannerAction?: PlannerAction;
+  plan?: AgentPlannedGoalWithTasks;
 }

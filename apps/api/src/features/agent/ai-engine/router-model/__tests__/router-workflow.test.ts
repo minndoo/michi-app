@@ -18,14 +18,18 @@ const createDeferred = <T>() => {
   return { promise, reject, resolve };
 };
 
-const createRouterState = (): RouterWorkflowState => ({
+const createRouterState = (
+  overrides: Partial<RouterWorkflowState> = {},
+): RouterWorkflowState => ({
   threadId: "thread-1",
   userId: "user-1",
   input: "Help me plan a study goal",
+  userGoalPlanInput: null,
   intent: null,
   response: "",
   plannerAction: null,
   plan: null,
+  ...overrides,
 });
 
 const createPlannerResult = (): PlannerWorkflowState => ({
@@ -69,10 +73,58 @@ describe("createRouterWorkflow", () => {
     const result = await workflow.invoke(createRouterState());
 
     expect(plannerWorkflow.invoke).toHaveBeenCalledTimes(1);
+    expect(plannerWorkflow.invoke).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: "Help me plan a study goal",
+      }),
+      {
+        configurable: {
+          checkpoint_ns: "user-1",
+          thread_id: "thread-1",
+        },
+      },
+    );
     expect(result.plannerAction).toBe("create_plan");
     expect(result.plan).toEqual(createPlannerResult().plan);
     expect(result.response).toBe(
       'Created a plan for "Study consistently" with 2 tasks.',
+    );
+  });
+
+  it("formats structured planning input before invoking the planner", async () => {
+    const plannerWorkflow = {
+      invoke: vi.fn().mockResolvedValue(createPlannerResult()),
+    };
+    const workflow = createRouterWorkflow({
+      model: createRouterModel("plan_goal"),
+      plannerWorkflow,
+    });
+
+    await workflow.invoke(
+      createRouterState({
+        input: "Run a 10k",
+        userGoalPlanInput: {
+          goal: "Run a 10k",
+          dueDate: "2026-03-15T00:00:00.000Z",
+          startingPoint: "I can run 3km right now.",
+        },
+      }),
+    );
+
+    expect(plannerWorkflow.invoke).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: [
+          "Goal: Run a 10k",
+          "Due date: 2026-03-15T00:00:00.000Z",
+          "Starting point: I can run 3km right now.",
+        ].join("\n"),
+      }),
+      {
+        configurable: {
+          checkpoint_ns: "user-1",
+          thread_id: "thread-1",
+        },
+      },
     );
   });
 

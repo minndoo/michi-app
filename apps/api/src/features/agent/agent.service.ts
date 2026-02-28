@@ -3,14 +3,20 @@ import type {
   AgentEngineResult,
   AgentMessageInput,
   AgentMessageResponse,
+  AgentPlanGoalInput,
+  AgentPlanGoalResponse,
+  UserGoalPlanInput,
 } from "./agent.types.js";
 
 type AgentServiceDeps = {
   engine: {
     invokeRouter: (args: {
       input: string;
-      threadId: string;
       userId: string;
+    }) => Promise<AgentEngineResult>;
+    planGoal: (args: {
+      userId: string;
+      userGoalPlanInput: UserGoalPlanInput;
     }) => Promise<AgentEngineResult>;
   };
 };
@@ -28,7 +34,6 @@ class AgentService {
   ): Promise<AgentMessageResponse> {
     const result = await this.deps.engine.invokeRouter({
       userId,
-      threadId: input.threadId,
       input: input.message,
     });
 
@@ -37,6 +42,27 @@ class AgentService {
       routedIntent: result.routedIntent,
       response: result.response,
       ...(result.plannerAction ? { plannerAction: result.plannerAction } : {}),
+    };
+  }
+
+  async planGoal(
+    userId: string,
+    input: AgentPlanGoalInput,
+  ): Promise<AgentPlanGoalResponse> {
+    const result = await this.deps.engine.planGoal({
+      userId,
+      userGoalPlanInput: {
+        goal: input.goal,
+        dueDate: input.dueDate,
+        startingPoint: input.startingPoint,
+      },
+    });
+
+    return {
+      routedIntent: result.routedIntent,
+      response: result.response,
+      ...(result.plannerAction ? { plannerAction: result.plannerAction } : {}),
+      ...(result.plan ? { plan: result.plan } : {}),
     };
   }
 }

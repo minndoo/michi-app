@@ -1,4 +1,4 @@
-import type { AgentEngineResult } from "../agent.types.js";
+import type { AgentEngineResult, UserGoalPlanInput } from "../agent.types.js";
 import type { PlannedGoalWithTasks } from "./agent.schemas.js";
 import type {
   RouterWorkflow,
@@ -8,8 +8,16 @@ import { getOrInitRouterWorkflow } from "./router-model/router-workflow.js";
 
 type InvokeArgs = {
   input: string;
-  threadId: string;
   userId: string;
+};
+
+type EngineRunArgs = InvokeArgs & {
+  threadId: string;
+};
+
+type PlanGoalArgs = {
+  userId: string;
+  userGoalPlanInput: UserGoalPlanInput;
 };
 
 type AiEngineDeps = {
@@ -43,18 +51,28 @@ export class AiEngineUnavailableError extends Error {
   }
 }
 
-const createRouterInputState = ({
-  input,
-  threadId,
+const createBaseRouterState = ({
   userId,
-}: InvokeArgs): RouterWorkflowState => ({
-  threadId,
+}: Pick<InvokeArgs, "userId">): RouterWorkflowState => ({
+  threadId: userId,
   userId,
-  input,
+  input: "",
   intent: null,
   response: "",
   plannerAction: null,
   plan: null,
+  userGoalPlanInput: null,
+});
+
+const createRouterState = (args: InvokeArgs): RouterWorkflowState => ({
+  ...createBaseRouterState({ userId: args.userId }),
+  input: args.input,
+});
+
+const createPlanGoalState = (args: PlanGoalArgs): RouterWorkflowState => ({
+  ...createBaseRouterState({ userId: args.userId }),
+  input: args.userGoalPlanInput.goal,
+  userGoalPlanInput: args.userGoalPlanInput,
 });
 
 export class AiEngine {
@@ -83,7 +101,7 @@ export class AiEngine {
       this.initPromise = this.initialize().catch((error: unknown) => {
         console.error("AI engine initialization failed", {
           error: getErrorMessage(error),
-          threadId: args.threadId,
+          threadId: args.userId,
           userId: args.userId,
         });
 
@@ -111,7 +129,7 @@ export class AiEngine {
   }
 
   private logPlannerOutcome(
-    args: InvokeArgs,
+    args: EngineRunArgs,
     result: RouterWorkflowState,
   ): void {
     if (result.intent !== "plan_goal") {
@@ -131,7 +149,10 @@ export class AiEngine {
     });
   }
 
-  private logPlanSuccess(args: InvokeArgs, plan: PlannedGoalWithTasks): void {
+  private logPlanSuccess(
+    args: EngineRunArgs,
+    plan: PlannedGoalWithTasks,
+  ): void {
     console.log("AI engine plan_goal success", {
       plan: JSON.stringify(plan, null, 2),
       threadId: args.threadId,
@@ -142,26 +163,69 @@ export class AiEngine {
   async invokeRouter(args: InvokeArgs): Promise<AgentEngineResult> {
     await this.getOrInit(args);
 
-    const result = await this.routerWorkflow!.invoke(
-      createRouterInputState(args),
-      {
-        configurable: {
-          thread_id: args.threadId,
-          checkpoint_ns: args.userId,
-        },
+    const state = createRouterState(args);
+
+    const result = await this.routerWorkflow!.invoke(state, {
+      configurable: {
+        thread_id: state.threadId,
+        checkpoint_ns: args.userId,
       },
-    );
+    });
 
     const routedIntent = result.intent ?? "refuse";
 
-    this.logPlannerOutcome(args, result);
+    this.logPlannerOutcome(
+      {
+        input: state.input,
+        threadId: state.threadId,
+        userId: args.userId,
+      },
+      result,
+    );
 
     return {
       routedIntent,
       response: result.response || routedIntent,
       ...(routedIntent === "plan_goal" && result.plannerAction
-        ? { plannerAction: result.plannerAction }
+        ? {
+            plannerAction: result.plannerAction,
+            ...(result.plan ? { plan: result.plan } : {}),
+          }
         : {}),
+    };
+  }
+
+  async planGoal(args: PlanGoalArgs): Promise<AgentEngineResult> {
+    const state = createPlanGoalState(args);
+
+    await this.getOrInit({
+      input: state.input,
+      userId: args.userId,
+    });
+
+    const result = await this.routerWorkflow!.invoke(state, {
+      configurable: {
+        thread_id: state.threadId,
+        checkpoint_ns: args.userId,
+      },
+    });
+
+    const routedIntent = result.intent ?? "refuse";
+
+    this.logPlannerOutcome(
+      {
+        input: state.input,
+        threadId: state.threadId,
+        userId: args.userId,
+      },
+      result,
+    );
+
+    return {
+      routedIntent,
+      response: result.response || routedIntent,
+      ...(result.plannerAction ? { plannerAction: result.plannerAction } : {}),
+      ...(result.plan ? { plan: result.plan } : {}),
     };
   }
 }

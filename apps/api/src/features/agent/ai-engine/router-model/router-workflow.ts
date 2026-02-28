@@ -1,7 +1,11 @@
 import type { RedisSaver } from "@langchain/langgraph-checkpoint-redis";
 import { Annotation, END, START, StateGraph } from "@langchain/langgraph";
 import { z } from "zod";
-import type { PlannerAction, RoutedIntent } from "../../agent.types.js";
+import type {
+  PlannerAction,
+  RoutedIntent,
+  UserGoalPlanInput,
+} from "../../agent.types.js";
 import type { PlannedGoalWithTasks } from "../agent.schemas.js";
 import { getOrInitCheckpointer } from "../checkpointer.js";
 import type {
@@ -16,6 +20,7 @@ const RouterState = Annotation.Root({
   threadId: Annotation<string>(),
   userId: Annotation<string>(),
   input: Annotation<string>(),
+  userGoalPlanInput: Annotation<UserGoalPlanInput | null>(),
   intent: Annotation<RoutedIntent | null>(),
   response: Annotation<string>(),
   plannerAction: Annotation<PlannerAction | null>(),
@@ -58,7 +63,24 @@ type CreateRouterWorkflowDeps = {
   plannerWorkflow: PlannerWorkflow;
 };
 
-const buildRouterPrompt = (input: string): string =>
+const buildPlanGoalInput = (state: RouterWorkflowState): string | null => {
+  if (!state.userGoalPlanInput) {
+    return null;
+  }
+
+  const { goal, dueDate, startingPoint } = state.userGoalPlanInput;
+
+  return [
+    `Goal: ${goal}`,
+    `Due date: ${dueDate}`,
+    `Starting point: ${startingPoint}`,
+  ].join("\n");
+};
+
+const getPlannerInput = (state: RouterWorkflowState): string =>
+  buildPlanGoalInput(state) ?? state.input;
+
+const buildRouterPrompt = (state: RouterWorkflowState): string =>
   `
 You route Michi assistant requests.
 Return structured output only.
@@ -71,7 +93,7 @@ Intent choices:
 - refuse: request is outside scope
 
 User request:
-${input}
+${getPlannerInput(state)}
 `.trim();
 
 const createPlannerInputState = (
@@ -79,7 +101,7 @@ const createPlannerInputState = (
 ): PlannerWorkflowState => ({
   threadId: state.threadId,
   userId: state.userId,
-  input: state.input,
+  input: getPlannerInput(state),
   intent: null,
   response: "",
   plannerAction: null,
@@ -96,7 +118,7 @@ export const createRouterWorkflow = ({
       const llm = model.withStructuredOutput(routerIntentSchema, {
         name: "router_intent",
       });
-      const output = await llm.invoke(buildRouterPrompt(state.input));
+      const output = await llm.invoke(buildRouterPrompt(state));
 
       return {
         intent: output.intent,
