@@ -13,7 +13,8 @@
         "PORT",
         "AUTH0_DOMAIN",
         "ALLOWED_ORIGINS",
-        "ORVAL_INPUT"
+        "ORVAL_INPUT",
+        "REDIS_URL"
       ]
     },
     "lint": {
