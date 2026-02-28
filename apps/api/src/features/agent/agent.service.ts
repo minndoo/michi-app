@@ -1,4 +1,4 @@
-import { aiEngine } from "./ai-engine.js";
+import { aiEngine } from "./ai-engine/index.js";
 import type {
   AgentEngineResult,
   AgentMessageInput,

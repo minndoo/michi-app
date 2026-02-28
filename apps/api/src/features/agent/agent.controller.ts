@@ -1,4 +1,5 @@
 import type { Request as ExpressRequest } from "express";
+import { AiEngineUnavailableError } from "./ai-engine/ai-engine.js";
 import {
   Body,
   Controller,
@@ -39,6 +40,15 @@ export class AgentController extends Controller {
     }
 
     const userId = getUserId(request);
-    return agentService.runMessage(userId, parsedBody.data);
+
+    try {
+      return await agentService.runMessage(userId, parsedBody.data);
+    } catch (error) {
+      if (error instanceof AiEngineUnavailableError) {
+        throw createHttpError(503, "Agent service temporarily unavailable");
+      }
+
+      throw error;
+    }
   }
 }

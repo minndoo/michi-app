@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-vi.mock("./ai-engine.js", () => ({
+vi.mock("../ai-engine/index.js", () => ({
   aiEngine: {
     invokeRouter: vi.fn(),
   },
 }));
-import { AgentService } from "./agent.service.js";
-import type { AgentEngineResult } from "./agent.types.js";
+import { AgentService } from "../agent.service.js";
+import type { AgentEngineResult } from "../agent.types.js";
 
 describe("AgentService", () => {
   beforeEach(() => {

@@ -14,7 +14,15 @@
         "AUTH0_DOMAIN",
         "ALLOWED_ORIGINS",
         "ORVAL_INPUT",
-        "REDIS_URL"
+        "REDIS_URL",
+        "PLANNER_LLM_PROVIDER",
+        "PLANNER_LLM_MODEL",
+        "PLANNER_LLM_BASE_URL",
+        "PLANNER_LLM_TEMPERATURE",
+        "ROUTER_LLM_PROVIDER",
+        "ROUTER_LLM_MODEL",
+        "ROUTER_LLM_BASE_URL",
+        "ROUTER_LLM_TEMPERATURE"
       ]
     },
     "lint": {
