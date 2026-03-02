@@ -5,17 +5,17 @@ import { describe, expect, it, vi } from "vitest";
 import type { Request as ExpressRequest } from "express";
 import { AiEngineUnavailableError } from "../ai-engine/ai-engine.js";
 
-const { runMessage } = vi.hoisted(() => ({
+const { runMessage: mockedRunMessage } = vi.hoisted(() => ({
   runMessage: vi.fn(),
 }));
-const { planGoal } = vi.hoisted(() => ({
+const { planGoal: mockedPlanGoal } = vi.hoisted(() => ({
   planGoal: vi.fn(),
 }));
 
 vi.mock("../agent.service.js", () => ({
   agentService: {
-    runMessage,
-    planGoal,
+    runMessage: mockedRunMessage,
+    planGoal: mockedPlanGoal,
   },
 }));
 
@@ -23,7 +23,7 @@ import { AgentController } from "../agent.controller.js";
 
 describe("AgentController", () => {
   it("delegates plan-goal requests to the service", async () => {
-    planGoal.mockResolvedValueOnce({
+    mockedPlanGoal.mockResolvedValueOnce({
       routedIntent: "plan_goal",
       plannerAction: "create_plan",
       response: 'Created a plan for "Run a 10k" with 2 tasks.',
@@ -43,9 +43,13 @@ describe("AgentController", () => {
           },
         } as ExpressRequest,
         {
-          goal: "Run a 10k",
-          dueDate: "2026-03-15T00:00:00.000Z",
-          startingPoint: "I can run 3km right now.",
+          timezone: "Europe/Warsaw",
+          planGoalInput: {
+            goal: "Run a 10k",
+            dueDate: "2026-03-15T00:00:00.000Z",
+            baseline: "I can run 3km right now.",
+            startDate: "2026-01-01T00:00:00.000Z",
+          },
         },
       ),
     ).resolves.toEqual({
@@ -60,7 +64,7 @@ describe("AgentController", () => {
   });
 
   it("maps AI engine initialization failures to 503", async () => {
-    runMessage.mockRejectedValueOnce(
+    mockedRunMessage.mockRejectedValueOnce(
       new AiEngineUnavailableError(
         "Agent service temporarily unavailable",
         new Error("redis offline"),
@@ -79,6 +83,7 @@ describe("AgentController", () => {
         {
           threadId: "thread-1",
           message: "show tasks",
+          timezone: "Europe/Warsaw",
         },
       ),
     ).rejects.toMatchObject({
@@ -88,7 +93,7 @@ describe("AgentController", () => {
   });
 
   it("maps plan-goal AI engine initialization failures to 503", async () => {
-    planGoal.mockRejectedValueOnce(
+    mockedPlanGoal.mockRejectedValueOnce(
       new AiEngineUnavailableError(
         "Agent service temporarily unavailable",
         new Error("redis offline"),
@@ -105,9 +110,13 @@ describe("AgentController", () => {
           },
         } as ExpressRequest,
         {
-          goal: "Run a 10k",
-          dueDate: "2026-03-15T00:00:00.000Z",
-          startingPoint: "I can run 3km right now.",
+          timezone: "Europe/Warsaw",
+          planGoalInput: {
+            goal: "Run a 10k",
+            dueDate: "2026-03-15T00:00:00.000Z",
+            baseline: "I can run 3km right now.",
+            startDate: "2026-01-01T00:00:00.000Z",
+          },
         },
       ),
     ).rejects.toMatchObject({

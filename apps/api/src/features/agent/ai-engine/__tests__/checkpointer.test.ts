@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { fromUrl } = vi.hoisted(() => ({
+const { fromUrl: mockedFromUrl } = vi.hoisted(() => ({
   fromUrl: vi.fn(),
 }));
 
 vi.mock("@langchain/langgraph-checkpoint-redis", () => ({
   RedisSaver: {
-    fromUrl,
+    fromUrl: mockedFromUrl,
   },
 }));
 
@@ -16,20 +16,20 @@ describe("getOrInitCheckpointer", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     vi.resetModules();
-    fromUrl.mockReset();
+    mockedFromUrl.mockReset();
   });
 
   it("logs Redis initialization failures and rethrows them", async () => {
-    const consoleErrorSpy = vi
+    const mockedConsoleErrorSpy = vi
       .spyOn(console, "error")
       .mockImplementation(() => {});
     const error = new Error("redis offline");
     const { getOrInitCheckpointer } = await loadModule();
 
-    fromUrl.mockRejectedValueOnce(error);
+    mockedFromUrl.mockRejectedValueOnce(error);
 
     await expect(getOrInitCheckpointer()).rejects.toBe(error);
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
+    expect(mockedConsoleErrorSpy).toHaveBeenCalledWith(
       "AI engine Redis initialization failed",
       expect.objectContaining({
         error: "redis offline",
@@ -43,19 +43,19 @@ describe("getOrInitCheckpointer", () => {
     const deferred = Promise.withResolvers<typeof checkpointer>();
     const { getOrInitCheckpointer } = await loadModule();
 
-    fromUrl.mockImplementationOnce(() => deferred.promise);
+    mockedFromUrl.mockImplementationOnce(() => deferred.promise);
 
     const first = getOrInitCheckpointer();
     const second = getOrInitCheckpointer();
 
-    expect(fromUrl).toHaveBeenCalledTimes(1);
+    expect(mockedFromUrl).toHaveBeenCalledTimes(1);
 
     deferred.resolve(checkpointer);
 
     await expect(first).resolves.toBe(checkpointer);
     await expect(second).resolves.toBe(checkpointer);
     await expect(getOrInitCheckpointer()).resolves.toBe(checkpointer);
-    expect(fromUrl).toHaveBeenCalledTimes(1);
+    expect(mockedFromUrl).toHaveBeenCalledTimes(1);
   });
 
   it("retries after a failed initialization", async () => {
@@ -63,12 +63,12 @@ describe("getOrInitCheckpointer", () => {
     const checkpointer = { saver: true };
     const { getOrInitCheckpointer } = await loadModule();
 
-    fromUrl
+    mockedFromUrl
       .mockRejectedValueOnce(firstError)
       .mockResolvedValueOnce(checkpointer);
 
     await expect(getOrInitCheckpointer()).rejects.toBe(firstError);
     await expect(getOrInitCheckpointer()).resolves.toBe(checkpointer);
-    expect(fromUrl).toHaveBeenCalledTimes(2);
+    expect(mockedFromUrl).toHaveBeenCalledTimes(2);
   });
 });

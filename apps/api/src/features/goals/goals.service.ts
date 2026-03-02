@@ -21,7 +21,7 @@ import type {
   UpdateGoalParams,
 } from "./goals.types.js";
 
-// TODO: change the service to build up data from one shot queries for now
+// TODO(Database): change the service to build up data from one database query for now
 // in order to reduce maintenance hell in the beginning
 
 const uniqueGoalIds = (goalIds: string[]): string[] =>
@@ -58,7 +58,7 @@ export const getGoalsProgressByIds = async ({
   userId,
   goalIds,
 }: GetGoalsProgressByIdsParams): Promise<Map<string, GoalProgress>> => {
-  // TODO: change the getGoals query to include all tasks properly with {select} object and aggregate the data there
+  // TODO(Database): change the getGoals query to include all tasks properly with {select} object and aggregate the data there
   // This is to reduce multiple db round trips
   const ids = uniqueGoalIds(goalIds);
   const progressMap = new Map<string, GoalProgress>();

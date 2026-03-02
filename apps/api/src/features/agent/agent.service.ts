@@ -8,13 +8,18 @@ import type {
   UserGoalPlanInput,
 } from "./agent.types.js";
 
+// TODO(AI Engine - Context engineering): ThreadID logic, creation and their persistence
 type AgentServiceDeps = {
   engine: {
     invokeRouter: (args: {
       input: string;
+      threadId: string;
       userId: string;
+      timezone: string;
     }) => Promise<AgentEngineResult>;
     planGoal: (args: {
+      threadId?: string | null;
+      timezone: string;
       userId: string;
       userGoalPlanInput: UserGoalPlanInput;
     }) => Promise<AgentEngineResult>;
@@ -35,6 +40,8 @@ class AgentService {
     const result = await this.deps.engine.invokeRouter({
       userId,
       input: input.message,
+      threadId: input.threadId,
+      timezone: input.timezone,
     });
 
     return {
@@ -42,6 +49,7 @@ class AgentService {
       routedIntent: result.routedIntent,
       response: result.response,
       ...(result.plannerAction ? { plannerAction: result.plannerAction } : {}),
+      ...(result.refusal ? { refusal: result.refusal } : {}),
     };
   }
 
@@ -51,11 +59,9 @@ class AgentService {
   ): Promise<AgentPlanGoalResponse> {
     const result = await this.deps.engine.planGoal({
       userId,
-      userGoalPlanInput: {
-        goal: input.goal,
-        dueDate: input.dueDate,
-        startingPoint: input.startingPoint,
-      },
+      threadId: input.threadId,
+      timezone: input.timezone,
+      userGoalPlanInput: input.planGoalInput,
     });
 
     return {
@@ -63,6 +69,7 @@ class AgentService {
       response: result.response,
       ...(result.plannerAction ? { plannerAction: result.plannerAction } : {}),
       ...(result.plan ? { plan: result.plan } : {}),
+      ...(result.refusal ? { refusal: result.refusal } : {}),
     };
   }
 }

@@ -53,7 +53,8 @@
   },
   "config": {
     "commitizen": {
-      "path": "cz-git"
+      "path": "cz-git",
+      "czConfig": "./cz.config.cjs"
     }
   }
 }

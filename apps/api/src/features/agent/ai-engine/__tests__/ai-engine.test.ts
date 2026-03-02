@@ -11,11 +11,15 @@ const createRouterState = (
   threadId: "thread-1",
   userId: "user-1",
   input: "Plan my fitness goal",
+  timezone: "Europe/Warsaw",
   userGoalPlanInput: null,
   intent: "refuse",
   response: "refuse",
   plannerAction: null,
   plan: null,
+  refusal: null,
+  missingPlanFields: [],
+  waitingForPlanInput: false,
   ...overrides,
 });
 
@@ -32,15 +36,15 @@ const createDeferred = <T>() => {
 };
 
 const createLazyInitDeps = (
-  routerWorkflow: RouterWorkflow,
+  mockedRouterWorkflow: RouterWorkflow,
   overrides: {
-    getOrInitRouterWorkflow?: () => Promise<RouterWorkflow>;
+    mockedGetOrInitRouterWorkflow?: () => Promise<RouterWorkflow>;
   } = {},
 ) => ({
   factories: {
     getOrInitRouterWorkflow:
-      overrides.getOrInitRouterWorkflow ??
-      vi.fn().mockResolvedValue(routerWorkflow),
+      overrides.mockedGetOrInitRouterWorkflow ??
+      vi.fn().mockResolvedValue(mockedRouterWorkflow),
   },
 });
 
@@ -50,7 +54,7 @@ describe("AiEngine", () => {
   });
 
   it("can be instantiated with injected workflows", async () => {
-    const routerWorkflow: RouterWorkflow = {
+    const mockedRouterWorkflow: RouterWorkflow = {
       invoke: vi.fn().mockResolvedValue(
         createRouterState({
           intent: "show_tasks",
@@ -60,24 +64,26 @@ describe("AiEngine", () => {
     };
 
     const engine = new AiEngine({
-      routerWorkflow,
+      routerWorkflow: mockedRouterWorkflow,
     });
 
     const result = await engine.invokeRouter({
       input: "show tasks",
+      threadId: "user-1",
       userId: "user-1",
+      timezone: "Europe/Warsaw",
     });
 
     expect(result).toEqual({
       routedIntent: "show_tasks",
       response: "show_tasks",
     });
-    expect(routerWorkflow.invoke).toHaveBeenCalledTimes(1);
-    expect(routerWorkflow.invoke).toHaveBeenCalledWith(
+    expect(mockedRouterWorkflow.invoke).toHaveBeenCalledTimes(1);
+    expect(mockedRouterWorkflow.invoke).toHaveBeenCalledWith(
       expect.objectContaining({
         threadId: "user-1",
         input: "show tasks",
-        userGoalPlanInput: null,
+        timezone: "Europe/Warsaw",
       }),
       {
         configurable: {
@@ -89,7 +95,7 @@ describe("AiEngine", () => {
   });
 
   it("logs validated plan output on successful plan_goal", async () => {
-    const routerWorkflow: RouterWorkflow = {
+    const mockedRouterWorkflow: RouterWorkflow = {
       invoke: vi.fn().mockResolvedValue(
         createRouterState({
           intent: "plan_goal",
@@ -107,15 +113,19 @@ describe("AiEngine", () => {
         }),
       ),
     };
-    const consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const mockedConsoleLogSpy = vi
+      .spyOn(console, "log")
+      .mockImplementation(() => {});
 
     const engine = new AiEngine({
-      routerWorkflow,
+      routerWorkflow: mockedRouterWorkflow,
     });
 
     const result = await engine.invokeRouter({
       input: "Plan my 10k training",
+      threadId: "user-1",
       userId: "user-1",
+      timezone: "Europe/Warsaw",
     });
 
     expect(result).toEqual({
@@ -132,7 +142,7 @@ describe("AiEngine", () => {
         ],
       },
     });
-    expect(consoleLogSpy).toHaveBeenCalledWith(
+    expect(mockedConsoleLogSpy).toHaveBeenCalledWith(
       "AI engine plan_goal success",
       expect.objectContaining({
         plan: JSON.stringify(
@@ -155,7 +165,7 @@ describe("AiEngine", () => {
   });
 
   it("returns structured plans from planGoal", async () => {
-    const routerWorkflow: RouterWorkflow = {
+    const mockedRouterWorkflow: RouterWorkflow = {
       invoke: vi.fn().mockResolvedValue(
         createRouterState({
           intent: "plan_goal",
@@ -175,15 +185,18 @@ describe("AiEngine", () => {
     };
 
     const engine = new AiEngine({
-      routerWorkflow,
+      routerWorkflow: mockedRouterWorkflow,
     });
 
     const result = await engine.planGoal({
+      threadId: null,
+      timezone: "Europe/Warsaw",
       userId: "user-1",
       userGoalPlanInput: {
         goal: "Run a 10k",
         dueDate: "2026-03-15T00:00:00.000Z",
-        startingPoint: "I can run 3km right now.",
+        baseline: "I can run 3km right now.",
+        startDate: "2026-01-01T00:00:00.000Z",
       },
     });
 
@@ -201,15 +214,17 @@ describe("AiEngine", () => {
         ],
       },
     });
-    expect(routerWorkflow.invoke).toHaveBeenCalledWith(
+    expect(mockedRouterWorkflow.invoke).toHaveBeenCalledWith(
       expect.objectContaining({
         threadId: "user-1",
         input: "Run a 10k",
         userGoalPlanInput: {
           goal: "Run a 10k",
           dueDate: "2026-03-15T00:00:00.000Z",
-          startingPoint: "I can run 3km right now.",
+          baseline: "I can run 3km right now.",
+          startDate: "2026-01-01T00:00:00.000Z",
         },
+        timezone: "Europe/Warsaw",
       }),
       {
         configurable: {
@@ -221,27 +236,34 @@ describe("AiEngine", () => {
   });
 
   it("omits plan data from refused planGoal responses", async () => {
-    const routerWorkflow: RouterWorkflow = {
+    const mockedRouterWorkflow: RouterWorkflow = {
       invoke: vi.fn().mockResolvedValue(
         createRouterState({
           intent: "plan_goal",
           response: "I couldn't create a plan from that request.",
           plannerAction: "refuse_plan",
           plan: null,
+          refusal: {
+            reason: "The timeline is too aggressive for the current baseline.",
+            proposals: ["Extend the due date.", "Reduce the target distance."],
+          },
         }),
       ),
     };
 
     const engine = new AiEngine({
-      routerWorkflow,
+      routerWorkflow: mockedRouterWorkflow,
     });
 
     const result = await engine.planGoal({
+      threadId: null,
+      timezone: "Europe/Warsaw",
       userId: "user-1",
       userGoalPlanInput: {
         goal: "Run a 10k",
         dueDate: "2026-03-15T00:00:00.000Z",
-        startingPoint: "I can run 3km right now.",
+        baseline: "I can run 3km right now.",
+        startDate: "2026-01-01T00:00:00.000Z",
       },
     });
 
@@ -249,40 +271,58 @@ describe("AiEngine", () => {
       routedIntent: "plan_goal",
       response: "I couldn't create a plan from that request.",
       plannerAction: "refuse_plan",
+      refusal: {
+        reason: "The timeline is too aggressive for the current baseline.",
+        proposals: ["Extend the due date.", "Reduce the target distance."],
+      },
     });
   });
 
   it("logs refusal output on refused plan_goal results", async () => {
-    const routerWorkflow: RouterWorkflow = {
+    const mockedRouterWorkflow: RouterWorkflow = {
       invoke: vi.fn().mockResolvedValue(
         createRouterState({
           intent: "plan_goal",
           response: "I couldn't create a plan from that request.",
           plannerAction: "refuse_plan",
+          refusal: {
+            reason: "The timeline is too aggressive for the current baseline.",
+            proposals: ["Extend the due date.", "Reduce the target distance."],
+          },
         }),
       ),
     };
-    const consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const mockedConsoleLogSpy = vi
+      .spyOn(console, "log")
+      .mockImplementation(() => {});
 
     const engine = new AiEngine({
-      routerWorkflow,
+      routerWorkflow: mockedRouterWorkflow,
     });
 
     const result = await engine.invokeRouter({
       input: "Do something vague",
+      threadId: "user-1",
       userId: "user-1",
+      timezone: "Europe/Warsaw",
     });
 
     expect(result).toEqual({
       routedIntent: "plan_goal",
       response: "I couldn't create a plan from that request.",
       plannerAction: "refuse_plan",
+      refusal: {
+        reason: "The timeline is too aggressive for the current baseline.",
+        proposals: ["Extend the due date.", "Reduce the target distance."],
+      },
     });
-    expect(consoleLogSpy).toHaveBeenCalledWith(
+    expect(mockedConsoleLogSpy).toHaveBeenCalledWith(
       "AI engine plan_goal refusal",
       expect.objectContaining({
         plannerAction: "refuse_plan",
         response: "I couldn't create a plan from that request.",
+        reason: "The timeline is too aggressive for the current baseline.",
+        proposals: ["Extend the due date.", "Reduce the target distance."],
         threadId: "user-1",
         userId: "user-1",
       }),
@@ -291,7 +331,7 @@ describe("AiEngine", () => {
 
   it("initializes lazily once for concurrent requests", async () => {
     const initGate = createDeferred<RouterWorkflow>();
-    const routerWorkflow: RouterWorkflow = {
+    const mockedRouterWorkflow: RouterWorkflow = {
       invoke: vi.fn().mockResolvedValue(
         createRouterState({
           intent: "show_tasks",
@@ -300,8 +340,8 @@ describe("AiEngine", () => {
       ),
     };
 
-    const deps = createLazyInitDeps(routerWorkflow, {
-      getOrInitRouterWorkflow: vi
+    const deps = createLazyInitDeps(mockedRouterWorkflow, {
+      mockedGetOrInitRouterWorkflow: vi
         .fn()
         .mockImplementation(() => initGate.promise),
     });
@@ -309,16 +349,20 @@ describe("AiEngine", () => {
 
     const firstRequest = engine.invokeRouter({
       input: "show tasks",
+      threadId: "user-1",
       userId: "user-1",
+      timezone: "Europe/Warsaw",
     });
     const secondRequest = engine.invokeRouter({
       input: "show tasks",
+      threadId: "user-2",
       userId: "user-2",
+      timezone: "Europe/Warsaw",
     });
 
     expect(deps.factories.getOrInitRouterWorkflow).toHaveBeenCalledTimes(1);
 
-    initGate.resolve(routerWorkflow);
+    initGate.resolve(mockedRouterWorkflow);
 
     await expect(firstRequest).resolves.toEqual({
       routedIntent: "show_tasks",
@@ -328,11 +372,11 @@ describe("AiEngine", () => {
       routedIntent: "show_tasks",
       response: "show_tasks",
     });
-    expect(routerWorkflow.invoke).toHaveBeenCalledTimes(2);
+    expect(mockedRouterWorkflow.invoke).toHaveBeenCalledTimes(2);
   });
 
   it("retries initialization after a failure", async () => {
-    const routerWorkflow: RouterWorkflow = {
+    const mockedRouterWorkflow: RouterWorkflow = {
       invoke: vi.fn().mockResolvedValue(
         createRouterState({
           intent: "show_tasks",
@@ -340,41 +384,43 @@ describe("AiEngine", () => {
         }),
       ),
     };
-    const getOrInitRouterWorkflow = vi
+    const mockedGetOrInitRouterWorkflow = vi
       .fn()
       .mockRejectedValueOnce(new Error("redis offline"))
-      .mockResolvedValue(routerWorkflow);
-    const consoleErrorSpy = vi
+      .mockResolvedValue(mockedRouterWorkflow);
+    const mockedConsoleErrorSpy = vi
       .spyOn(console, "error")
       .mockImplementation(() => {});
     const engine = new AiEngine(
-      createLazyInitDeps(routerWorkflow, {
-        getOrInitRouterWorkflow,
+      createLazyInitDeps(mockedRouterWorkflow, {
+        mockedGetOrInitRouterWorkflow,
       }),
     );
 
     await expect(
       engine.invokeRouter({
         input: "show tasks",
-        threadId: "thread-1",
+        threadId: "user-1",
         userId: "user-1",
+        timezone: "Europe/Warsaw",
       }),
     ).rejects.toBeInstanceOf(AiEngineUnavailableError);
 
     await expect(
       engine.invokeRouter({
         input: "show tasks",
-        threadId: "thread-1",
+        threadId: "user-1",
         userId: "user-1",
+        timezone: "Europe/Warsaw",
       }),
     ).resolves.toEqual({
       routedIntent: "show_tasks",
       response: "show_tasks",
     });
 
-    expect(getOrInitRouterWorkflow).toHaveBeenCalledTimes(2);
-    expect(routerWorkflow.invoke).toHaveBeenCalledTimes(1);
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
+    expect(mockedGetOrInitRouterWorkflow).toHaveBeenCalledTimes(2);
+    expect(mockedRouterWorkflow.invoke).toHaveBeenCalledTimes(1);
+    expect(mockedConsoleErrorSpy).toHaveBeenCalledWith(
       "AI engine initialization failed",
       expect.objectContaining({
         error: "redis offline",

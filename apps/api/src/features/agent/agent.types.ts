@@ -12,22 +12,33 @@ export const plannerActionValues = ["create_plan", "refuse_plan"] as const;
 
 export type PlannerAction = (typeof plannerActionValues)[number];
 
-export interface AgentMessageInput {
-  threadId: string;
-  message: string;
+export interface AgentRefusal {
+  reason: string;
+  proposals: string[];
 }
 
-export interface AgentPlanGoalInput {
-  goal: string;
-  dueDate: string;
-  startingPoint: string;
+export interface AgentInput {
+  threadId?: string | null;
+  timezone: string;
+}
+
+export interface AgentMessageInput extends AgentInput {
+  threadId: string;
+  message: string;
 }
 
 export interface UserGoalPlanInput {
   goal: string;
   dueDate: string;
-  startingPoint: string;
+  baseline: string;
+  startDate: string;
 }
+
+export interface AgentPlanGoalInput extends AgentInput {
+  planGoalInput: UserGoalPlanInput;
+}
+
+export type PartialUserGoalPlanInput = Partial<UserGoalPlanInput>;
 
 export interface AgentPlannedGoal {
   title: string;
@@ -51,6 +62,7 @@ export interface AgentMessageResponse {
   routedIntent: RoutedIntent;
   response: string;
   plannerAction?: PlannerAction;
+  refusal?: AgentRefusal;
 }
 
 export interface AgentPlanGoalResponse {
@@ -58,6 +70,7 @@ export interface AgentPlanGoalResponse {
   response: string;
   plannerAction?: PlannerAction;
   plan?: AgentPlannedGoalWithTasks;
+  refusal?: AgentRefusal;
 }
 
 export interface AgentEngineInput extends AgentMessageInput {
@@ -69,4 +82,5 @@ export interface AgentEngineResult {
   response: string;
   plannerAction?: PlannerAction;
   plan?: AgentPlannedGoalWithTasks;
+  refusal?: AgentRefusal;
 }

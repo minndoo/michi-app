@@ -2,7 +2,11 @@ import type { PostgresStore } from "@langchain/langgraph-checkpoint-postgres/sto
 import type { RedisSaver } from "@langchain/langgraph-checkpoint-redis";
 import { Annotation, END, START, StateGraph } from "@langchain/langgraph";
 import { z } from "zod";
-import type { PlannerAction } from "../../agent.types.js";
+import type {
+  AgentRefusal,
+  PlannerAction,
+  UserGoalPlanInput,
+} from "../../agent.types.js";
 import {
   plannedGoalWithTasksSchema,
   type PlannedGoalWithTasks,
@@ -17,15 +21,20 @@ import {
 
 const plannerRefusalResponse =
   "I couldn't create a plan from that request. Please try again with a clearer goal.";
+const plannerRefusalProposal =
+  "Provide a more realistic goal, timeline, or baseline.";
 
 const PlannerState = Annotation.Root({
   threadId: Annotation<string>(),
   userId: Annotation<string>(),
   input: Annotation<string>(),
+  timezone: Annotation<string>(),
+  userGoalPlanInput: Annotation<UserGoalPlanInput | null>(),
   intent: Annotation<PlannerAction | null>(),
   response: Annotation<string>(),
   plannerAction: Annotation<PlannerAction | null>(),
   plan: Annotation<PlannedGoalWithTasks | null>(),
+  refusal: Annotation<AgentRefusal | null>(),
 });
 
 type PlannerRunnable<TSchema extends z.ZodTypeAny> = {
@@ -64,21 +73,45 @@ type CreatePlannerWorkflowDeps = {
   store?: PostgresStore;
 };
 
-const buildPlannerPrompt = (input: string): string =>
+const buildPlannerInput = (
+  userGoalPlanInput: UserGoalPlanInput | null,
+  timezone: string,
+): string =>
+  userGoalPlanInput
+    ? [
+        `Goal: ${userGoalPlanInput.goal}`,
+        `Baseline: ${userGoalPlanInput.baseline}`,
+        `Start date: ${userGoalPlanInput.startDate}`,
+        `Due date: ${userGoalPlanInput.dueDate}`,
+        `Timezone: ${timezone}`,
+      ].join("\n")
+    : "";
+
+// TODO(AI Engine): Improve prompt
+// TODO(AI Engine): Make goals and baselines quantifiable
+// TODO(AI Engine): Improve quantifiable goal and baseline descriptions (e. g. ask user for clarification)
+// TODO(AI Engine): Separate quantifying of parameters into it's own file (Graph node)
+const buildPlannerPrompt = (state: PlannerWorkflowState): string =>
   `
 You are a supportive planning coach for Michi.
 Help the user turn their request into one goal and a practical roadmap of tasks.
 Return structured output only.
 
 Rules:
-- Create exactly one goal.
-- Create between 1 and 10 tasks.
 - Focus on concrete, actionable planning.
-- Do not add guardrails beyond the refusal branch.
-- Use dueAt only if the user clearly provides time information.
+- Distribute work between the provided start date and due date.
+- Respect the user's baseline when deciding scope and sequencing.
+- Use dueAt when you can anchor work to a specific day in the schedule.
+- Refuse unrealistic plans instead of overcommitting.
+- If refused, don't even create the plan, don't create the goal and tasks.
+- If plan is accepted create exactly one goal with it's tasks as a scheduled array.
+- Titles must include a measurable action (distance/minutes).
+- No “later”, “increase gradually”, “build a schedule”, “work on endurance”.
+- Each schedule item must anchor to a specific calendar date.
+- All workouts default to 09:00 local time unless user provided time
 
 User request:
-${input}
+${state.userGoalPlanInput ? buildPlannerInput(state.userGoalPlanInput, state.timezone) : state.input}
 `.trim();
 
 const toPlanResponse = (plan: PlannedGoalWithTasks): string =>
@@ -92,6 +125,37 @@ const normalizePlan = (
     tasks: output.tasks.slice(0, 10),
   });
 
+const createFallbackRefusal = (): AgentRefusal => ({
+  reason: plannerRefusalResponse,
+  proposals: [plannerRefusalProposal],
+});
+
+const normalizeRefusal = (output: unknown): AgentRefusal => {
+  if (
+    output &&
+    typeof output === "object" &&
+    "reason" in output &&
+    "proposals" in output &&
+    typeof output.reason === "string" &&
+    output.reason.trim() &&
+    Array.isArray(output.proposals)
+  ) {
+    const proposals = output.proposals.filter(
+      (proposal): proposal is string =>
+        typeof proposal === "string" && proposal.trim().length > 0,
+    );
+
+    if (proposals.length > 0) {
+      return {
+        reason: output.reason.trim(),
+        proposals,
+      };
+    }
+  }
+
+  return createFallbackRefusal();
+};
+
 export const createPlannerWorkflow = ({
   checkpointer,
   model,
@@ -102,12 +166,15 @@ export const createPlannerWorkflow = ({
       const llm = model.withStructuredOutput(plannerModelOutputSchema, {
         name: "planner_output",
       });
-      const output = await llm.invoke(buildPlannerPrompt(state.input));
+      const output = await llm.invoke(buildPlannerPrompt(state));
 
       if (output.intent === "refuse_plan") {
+        const refusal = normalizeRefusal(output);
+
         return {
           intent: "refuse_plan" as PlannerAction,
-          response: output.reason ?? plannerRefusalResponse,
+          response: refusal.reason,
+          refusal,
         };
       }
 
@@ -119,9 +186,12 @@ export const createPlannerWorkflow = ({
           plan,
         };
       } catch {
+        const refusal = createFallbackRefusal();
+
         return {
           intent: "refuse_plan" as PlannerAction,
-          response: plannerRefusalResponse,
+          response: refusal.reason,
+          refusal,
         };
       }
     })
@@ -130,11 +200,17 @@ export const createPlannerWorkflow = ({
       response: state.plan
         ? toPlanResponse(state.plan)
         : plannerRefusalResponse,
+      refusal: null,
     }))
-    .addNode("refuse_plan", async (state: PlannerWorkflowState) => ({
-      plannerAction: "refuse_plan" as PlannerAction,
-      response: state.response || plannerRefusalResponse,
-    }))
+    .addNode("refuse_plan", async (state: PlannerWorkflowState) => {
+      const refusal = state.refusal ?? createFallbackRefusal();
+
+      return {
+        plannerAction: "refuse_plan" as PlannerAction,
+        response: state.response || refusal.reason,
+        refusal,
+      };
+    })
     .addEdge(START, "llmCallPlanner")
     .addConditionalEdges("llmCallPlanner", (state: PlannerWorkflowState) =>
       state.intent === "create_plan" ? "create_plan" : "refuse_plan",

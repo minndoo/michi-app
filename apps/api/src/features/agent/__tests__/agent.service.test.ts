@@ -14,7 +14,7 @@ describe("AgentService", () => {
   });
 
   it("routes plan_goal to planner", async () => {
-    const invokeRouter = vi
+    const mockedInvokeRouter = vi
       .fn<() => Promise<AgentEngineResult>>()
       .mockResolvedValue({
         routedIntent: "plan_goal",
@@ -24,7 +24,7 @@ describe("AgentService", () => {
 
     const service = new AgentService({
       engine: {
-        invokeRouter: invokeRouter as never,
+        invokeRouter: mockedInvokeRouter as never,
         planGoal: vi.fn(),
       },
     });
@@ -32,6 +32,7 @@ describe("AgentService", () => {
     const result = await service.runMessage("user-1", {
       threadId: "thread-1",
       message: "I want to plan my running goal.",
+      timezone: "Europe/Warsaw",
     });
 
     expect(result).toEqual({
@@ -40,15 +41,17 @@ describe("AgentService", () => {
       plannerAction: "create_plan",
       response: "Plan created.",
     });
-    expect(invokeRouter).toHaveBeenCalledTimes(1);
-    expect(invokeRouter).toHaveBeenCalledWith({
+    expect(mockedInvokeRouter).toHaveBeenCalledTimes(1);
+    expect(mockedInvokeRouter).toHaveBeenCalledWith({
       input: "I want to plan my running goal.",
+      threadId: "thread-1",
       userId: "user-1",
+      timezone: "Europe/Warsaw",
     });
   });
 
   it("returns non-plan intents unchanged", async () => {
-    const invokeRouter = vi
+    const mockedInvokeRouter = vi
       .fn<() => Promise<AgentEngineResult>>()
       .mockResolvedValue({
         routedIntent: "show_tasks",
@@ -57,7 +60,7 @@ describe("AgentService", () => {
 
     const service = new AgentService({
       engine: {
-        invokeRouter: invokeRouter as never,
+        invokeRouter: mockedInvokeRouter as never,
         planGoal: vi.fn(),
       },
     });
@@ -65,6 +68,7 @@ describe("AgentService", () => {
     const result = await service.runMessage("user-1", {
       threadId: "thread-1",
       message: "show my tasks",
+      timezone: "Europe/Warsaw",
     });
 
     expect(result).toEqual({
@@ -72,15 +76,17 @@ describe("AgentService", () => {
       routedIntent: "show_tasks",
       response: "Here are your tasks.",
     });
-    expect(invokeRouter).toHaveBeenCalledTimes(1);
-    expect(invokeRouter).toHaveBeenCalledWith({
+    expect(mockedInvokeRouter).toHaveBeenCalledTimes(1);
+    expect(mockedInvokeRouter).toHaveBeenCalledWith({
       input: "show my tasks",
+      threadId: "thread-1",
       userId: "user-1",
+      timezone: "Europe/Warsaw",
     });
   });
 
   it("returns refuse response when engine routes to refuse", async () => {
-    const invokeRouter = vi
+    const mockedInvokeRouter = vi
       .fn<() => Promise<AgentEngineResult>>()
       .mockResolvedValue({
         routedIntent: "refuse",
@@ -89,7 +95,7 @@ describe("AgentService", () => {
 
     const service = new AgentService({
       engine: {
-        invokeRouter: invokeRouter as never,
+        invokeRouter: mockedInvokeRouter as never,
         planGoal: vi.fn(),
       },
     });
@@ -97,6 +103,7 @@ describe("AgentService", () => {
     const result = await service.runMessage("user-1", {
       threadId: "thread-1",
       message: "do something unrelated",
+      timezone: "Europe/Warsaw",
     });
 
     expect(result).toEqual({
@@ -104,15 +111,17 @@ describe("AgentService", () => {
       routedIntent: "refuse",
       response: "I can only help with goals and tasks.",
     });
-    expect(invokeRouter).toHaveBeenCalledTimes(1);
-    expect(invokeRouter).toHaveBeenCalledWith({
+    expect(mockedInvokeRouter).toHaveBeenCalledTimes(1);
+    expect(mockedInvokeRouter).toHaveBeenCalledWith({
       input: "do something unrelated",
+      threadId: "thread-1",
       userId: "user-1",
+      timezone: "Europe/Warsaw",
     });
   });
 
   it("returns structured plan-goal responses", async () => {
-    const planGoal = vi
+    const mockedPlanGoal = vi
       .fn<() => Promise<AgentEngineResult>>()
       .mockResolvedValue({
         routedIntent: "plan_goal",
@@ -132,14 +141,18 @@ describe("AgentService", () => {
     const service = new AgentService({
       engine: {
         invokeRouter: vi.fn() as never,
-        planGoal: planGoal as never,
+        planGoal: mockedPlanGoal as never,
       },
     });
 
     const result = await service.planGoal("user-1", {
-      goal: "Run a 10k",
-      dueDate: "2026-03-15T00:00:00.000Z",
-      startingPoint: "I can run 3km right now.",
+      timezone: "Europe/Warsaw",
+      planGoalInput: {
+        goal: "Run a 10k",
+        dueDate: "2026-03-15T00:00:00.000Z",
+        baseline: "I can run 3km right now.",
+        startDate: "2026-01-01T00:00:00.000Z",
+      },
     });
 
     expect(result).toEqual({
@@ -156,51 +169,69 @@ describe("AgentService", () => {
         ],
       },
     });
-    expect(planGoal).toHaveBeenCalledTimes(1);
-    expect(planGoal).toHaveBeenCalledWith({
+    expect(mockedPlanGoal).toHaveBeenCalledTimes(1);
+    expect(mockedPlanGoal).toHaveBeenCalledWith({
       userId: "user-1",
+      threadId: undefined,
+      timezone: "Europe/Warsaw",
       userGoalPlanInput: {
         goal: "Run a 10k",
         dueDate: "2026-03-15T00:00:00.000Z",
-        startingPoint: "I can run 3km right now.",
+        baseline: "I can run 3km right now.",
+        startDate: "2026-01-01T00:00:00.000Z",
       },
     });
   });
 
   it("returns refused plan-goal responses without a plan", async () => {
-    const planGoal = vi
+    const mockedPlanGoal = vi
       .fn<() => Promise<AgentEngineResult>>()
       .mockResolvedValue({
         routedIntent: "plan_goal",
         plannerAction: "refuse_plan",
         response: "I couldn't create a plan from that request.",
+        refusal: {
+          reason: "The timeline is too aggressive for the current baseline.",
+          proposals: ["Extend the due date.", "Reduce the target distance."],
+        },
       });
 
     const service = new AgentService({
       engine: {
         invokeRouter: vi.fn() as never,
-        planGoal: planGoal as never,
+        planGoal: mockedPlanGoal as never,
       },
     });
 
     const result = await service.planGoal("user-1", {
-      goal: "Run a 10k",
-      dueDate: "2026-03-15T00:00:00.000Z",
-      startingPoint: "I can run 3km right now.",
+      timezone: "Europe/Warsaw",
+      planGoalInput: {
+        goal: "Run a 10k",
+        dueDate: "2026-03-15T00:00:00.000Z",
+        baseline: "I can run 3km right now.",
+        startDate: "2026-01-01T00:00:00.000Z",
+      },
     });
 
     expect(result).toEqual({
       routedIntent: "plan_goal",
       plannerAction: "refuse_plan",
       response: "I couldn't create a plan from that request.",
+      refusal: {
+        reason: "The timeline is too aggressive for the current baseline.",
+        proposals: ["Extend the due date.", "Reduce the target distance."],
+      },
     });
-    expect(planGoal).toHaveBeenCalledTimes(1);
-    expect(planGoal).toHaveBeenCalledWith({
+    expect(mockedPlanGoal).toHaveBeenCalledTimes(1);
+    expect(mockedPlanGoal).toHaveBeenCalledWith({
       userId: "user-1",
+      threadId: undefined,
+      timezone: "Europe/Warsaw",
       userGoalPlanInput: {
         goal: "Run a 10k",
         dueDate: "2026-03-15T00:00:00.000Z",
-        startingPoint: "I can run 3km right now.",
+        baseline: "I can run 3km right now.",
+        startDate: "2026-01-01T00:00:00.000Z",
       },
     });
   });

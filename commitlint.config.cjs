@@ -6,4 +6,7 @@ module.exports = {
     (message) => message.startsWith('Squashed commit'),
     (message) => message.includes('# This is a combination of'),
   ],
+  rules: {
+    'scope-enum': [2, 'always', ['ai-engine', 'database']],
+  },
 };

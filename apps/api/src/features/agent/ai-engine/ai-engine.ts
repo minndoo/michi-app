@@ -2,13 +2,16 @@ import type { AgentEngineResult, UserGoalPlanInput } from "../agent.types.js";
 import type { PlannedGoalWithTasks } from "./agent.schemas.js";
 import type {
   RouterWorkflow,
+  RouterWorkflowInput,
   RouterWorkflowState,
 } from "./router-model/router-workflow.js";
 import { getOrInitRouterWorkflow } from "./router-model/router-workflow.js";
 
 type InvokeArgs = {
   input: string;
+  threadId: string;
   userId: string;
+  timezone: string;
 };
 
 type EngineRunArgs = InvokeArgs & {
@@ -16,6 +19,8 @@ type EngineRunArgs = InvokeArgs & {
 };
 
 type PlanGoalArgs = {
+  threadId?: string | null;
+  timezone: string;
   userId: string;
   userGoalPlanInput: UserGoalPlanInput;
 };
@@ -52,25 +57,35 @@ export class AiEngineUnavailableError extends Error {
 }
 
 const createBaseRouterState = ({
+  threadId,
   userId,
-}: Pick<InvokeArgs, "userId">): RouterWorkflowState => ({
-  threadId: userId,
+  timezone,
+}: Pick<
+  InvokeArgs,
+  "threadId" | "userId" | "timezone"
+>): RouterWorkflowInput => ({
+  threadId,
   userId,
   input: "",
-  intent: null,
-  response: "",
-  plannerAction: null,
-  plan: null,
-  userGoalPlanInput: null,
+  timezone,
 });
 
-const createRouterState = (args: InvokeArgs): RouterWorkflowState => ({
-  ...createBaseRouterState({ userId: args.userId }),
+const createRouterState = (args: InvokeArgs): RouterWorkflowInput => ({
+  ...createBaseRouterState({
+    threadId: args.threadId,
+    userId: args.userId,
+    timezone: args.timezone,
+  }),
   input: args.input,
 });
 
-const createPlanGoalState = (args: PlanGoalArgs): RouterWorkflowState => ({
-  ...createBaseRouterState({ userId: args.userId }),
+// TODO(AI Engine): make threadId mandatory
+const createPlanGoalState = (args: PlanGoalArgs): RouterWorkflowInput => ({
+  ...createBaseRouterState({
+    threadId: args.threadId ?? args.userId,
+    userId: args.userId,
+    timezone: args.timezone,
+  }),
   input: args.userGoalPlanInput.goal,
   userGoalPlanInput: args.userGoalPlanInput,
 });
@@ -141,9 +156,15 @@ export class AiEngine {
       return;
     }
 
+    if (result.plannerAction !== "refuse_plan") {
+      return;
+    }
+
     console.log("AI engine plan_goal refusal", {
       plannerAction: result.plannerAction ?? "refuse_plan",
       response: result.response,
+      reason: result.refusal?.reason,
+      proposals: result.refusal?.proposals,
       threadId: args.threadId,
       userId: args.userId,
     });
@@ -167,7 +188,7 @@ export class AiEngine {
 
     const result = await this.routerWorkflow!.invoke(state, {
       configurable: {
-        thread_id: state.threadId,
+        thread_id: state.threadId ?? args.userId,
         checkpoint_ns: args.userId,
       },
     });
@@ -176,9 +197,10 @@ export class AiEngine {
 
     this.logPlannerOutcome(
       {
-        input: state.input,
-        threadId: state.threadId,
+        input: state.input ?? args.input,
+        threadId: state.threadId ?? args.threadId,
         userId: args.userId,
+        timezone: args.timezone,
       },
       result,
     );
@@ -190,6 +212,7 @@ export class AiEngine {
         ? {
             plannerAction: result.plannerAction,
             ...(result.plan ? { plan: result.plan } : {}),
+            ...(result.refusal ? { refusal: result.refusal } : {}),
           }
         : {}),
     };
@@ -199,13 +222,15 @@ export class AiEngine {
     const state = createPlanGoalState(args);
 
     await this.getOrInit({
-      input: state.input,
+      input: state.input ?? args.userGoalPlanInput.goal,
+      threadId: state.threadId ?? args.threadId ?? args.userId,
       userId: args.userId,
+      timezone: args.timezone,
     });
 
     const result = await this.routerWorkflow!.invoke(state, {
       configurable: {
-        thread_id: state.threadId,
+        thread_id: state.threadId ?? args.userId,
         checkpoint_ns: args.userId,
       },
     });
@@ -214,9 +239,10 @@ export class AiEngine {
 
     this.logPlannerOutcome(
       {
-        input: state.input,
-        threadId: state.threadId,
+        input: state.input ?? args.userGoalPlanInput.goal,
+        threadId: state.threadId ?? args.threadId ?? args.userId,
         userId: args.userId,
+        timezone: args.timezone,
       },
       result,
     );
@@ -226,6 +252,7 @@ export class AiEngine {
       response: result.response || routedIntent,
       ...(result.plannerAction ? { plannerAction: result.plannerAction } : {}),
       ...(result.plan ? { plan: result.plan } : {}),
+      ...(result.refusal ? { refusal: result.refusal } : {}),
     };
   }
 }

@@ -24,18 +24,35 @@ const createRouterState = (
   threadId: "thread-1",
   userId: "user-1",
   input: "Help me plan a study goal",
+  timezone: "Europe/Warsaw",
   userGoalPlanInput: null,
   intent: null,
   response: "",
   plannerAction: null,
   plan: null,
+  refusal: null,
+  missingPlanFields: [],
+  waitingForPlanInput: false,
   ...overrides,
 });
 
 const createPlannerResult = (): PlannerWorkflowState => ({
   threadId: "thread-1",
   userId: "user-1",
-  input: "Help me plan a study goal",
+  input: [
+    "Goal: Study consistently",
+    "Baseline: I currently study once a week.",
+    "Start date: 2026-01-01T00:00:00.000Z",
+    "Due date: 2026-03-01T00:00:00.000Z",
+    "Timezone: Europe/Warsaw",
+  ].join("\n"),
+  userGoalPlanInput: {
+    goal: "Study consistently",
+    dueDate: "2026-03-01T00:00:00.000Z",
+    baseline: "I currently study once a week.",
+    startDate: "2026-01-01T00:00:00.000Z",
+  },
+  timezone: "Europe/Warsaw",
   intent: "create_plan",
   response: 'Created a plan for "Study consistently" with 2 tasks.',
   plannerAction: "create_plan",
@@ -52,30 +69,56 @@ const createPlannerResult = (): PlannerWorkflowState => ({
       },
     ],
   },
+  refusal: null,
 });
 
-const createRouterModel = (intent: string): RouterModel => ({
-  withStructuredOutput: () => ({
-    invoke: vi.fn().mockResolvedValue({ intent }),
+const createRouterModel = ({
+  extractedInput = {},
+  intent,
+}: {
+  intent: string;
+  extractedInput?: Record<string, string>;
+}): RouterModel => ({
+  withStructuredOutput: (_schema, options) => ({
+    invoke: vi
+      .fn()
+      .mockResolvedValue(
+        options.name === "router_intent" ? { intent } : extractedInput,
+      ),
   }),
 });
 
 describe("createRouterWorkflow", () => {
   it("invokes planner workflow on the plan_goal branch", async () => {
-    const plannerWorkflow = {
+    const mockedPlannerWorkflow = {
       invoke: vi.fn().mockResolvedValue(createPlannerResult()),
     };
     const workflow = createRouterWorkflow({
-      model: createRouterModel("plan_goal"),
-      plannerWorkflow,
+      model: createRouterModel({ intent: "plan_goal" }),
+      plannerWorkflow: mockedPlannerWorkflow,
     });
 
-    const result = await workflow.invoke(createRouterState());
+    const result = await workflow.invoke(
+      createRouterState({
+        userGoalPlanInput: {
+          goal: "Study consistently",
+          dueDate: "2026-03-01T00:00:00.000Z",
+          baseline: "I currently study once a week.",
+          startDate: "2026-01-01T00:00:00.000Z",
+        },
+      }),
+    );
 
-    expect(plannerWorkflow.invoke).toHaveBeenCalledTimes(1);
-    expect(plannerWorkflow.invoke).toHaveBeenCalledWith(
+    expect(mockedPlannerWorkflow.invoke).toHaveBeenCalledTimes(1);
+    expect(mockedPlannerWorkflow.invoke).toHaveBeenCalledWith(
       expect.objectContaining({
-        input: "Help me plan a study goal",
+        input: [
+          "Goal: Study consistently",
+          "Due date: 2026-03-01T00:00:00.000Z",
+          "Baseline: I currently study once a week.",
+          "Start date: 2026-01-01T00:00:00.000Z",
+          "Timezone: Europe/Warsaw",
+        ].join("\n"),
       }),
       {
         configurable: {
@@ -92,12 +135,12 @@ describe("createRouterWorkflow", () => {
   });
 
   it("formats structured planning input before invoking the planner", async () => {
-    const plannerWorkflow = {
+    const mockedPlannerWorkflow = {
       invoke: vi.fn().mockResolvedValue(createPlannerResult()),
     };
     const workflow = createRouterWorkflow({
-      model: createRouterModel("plan_goal"),
-      plannerWorkflow,
+      model: createRouterModel({ intent: "plan_goal" }),
+      plannerWorkflow: mockedPlannerWorkflow,
     });
 
     await workflow.invoke(
@@ -106,17 +149,20 @@ describe("createRouterWorkflow", () => {
         userGoalPlanInput: {
           goal: "Run a 10k",
           dueDate: "2026-03-15T00:00:00.000Z",
-          startingPoint: "I can run 3km right now.",
+          baseline: "I can run 3km right now.",
+          startDate: "2026-01-01T00:00:00.000Z",
         },
       }),
     );
 
-    expect(plannerWorkflow.invoke).toHaveBeenCalledWith(
+    expect(mockedPlannerWorkflow.invoke).toHaveBeenCalledWith(
       expect.objectContaining({
         input: [
           "Goal: Run a 10k",
           "Due date: 2026-03-15T00:00:00.000Z",
-          "Starting point: I can run 3km right now.",
+          "Baseline: I can run 3km right now.",
+          "Start date: 2026-01-01T00:00:00.000Z",
+          "Timezone: Europe/Warsaw",
         ].join("\n"),
       }),
       {
@@ -128,18 +174,76 @@ describe("createRouterWorkflow", () => {
     );
   });
 
-  it("does not invoke planner workflow for non-planning intents", async () => {
-    const plannerWorkflow = {
+  it("asks only for missing planning fields on the plain-input path", async () => {
+    const mockedPlannerWorkflow = {
       invoke: vi.fn(),
     };
     const workflow = createRouterWorkflow({
-      model: createRouterModel("show_tasks"),
-      plannerWorkflow,
+      model: createRouterModel({
+        intent: "plan_goal",
+        extractedInput: {
+          goal: "Run a 10k",
+        },
+      }),
+      plannerWorkflow: mockedPlannerWorkflow,
+    });
+
+    const result = await workflow.invoke(
+      createRouterState({
+        input: "Help me plan a 10k",
+      }),
+    );
+
+    expect(mockedPlannerWorkflow.invoke).not.toHaveBeenCalled();
+    expect(result.response).toBe(
+      "I can create a plan once I have a few more details. Please provide the due date, baseline, start date.",
+    );
+    expect(result.missingPlanFields).toEqual([
+      "dueDate",
+      "baseline",
+      "startDate",
+    ]);
+    expect(result.waitingForPlanInput).toBe(true);
+    expect(result.plannerAction).toBeNull();
+  });
+
+  it("does not evaluate timezone in router graph decisions", async () => {
+    const mockedPlannerWorkflow = {
+      invoke: vi.fn().mockResolvedValue(createPlannerResult()),
+    };
+    const workflow = createRouterWorkflow({
+      model: createRouterModel({ intent: "plan_goal" }),
+      plannerWorkflow: mockedPlannerWorkflow,
+    });
+
+    const result = await workflow.invoke(
+      createRouterState({
+        timezone: "Europe/Warsaw",
+        userGoalPlanInput: {
+          goal: "Study consistently",
+          dueDate: "2026-03-01T00:00:00.000Z",
+          baseline: "I currently study once a week.",
+          startDate: "2026-01-01T00:00:00.000Z",
+        },
+      }),
+    );
+
+    expect(mockedPlannerWorkflow.invoke).toHaveBeenCalledTimes(1);
+    expect(result.plannerAction).toBe("create_plan");
+  });
+
+  it("does not invoke planner workflow for non-planning intents", async () => {
+    const mockedPlannerWorkflow = {
+      invoke: vi.fn(),
+    };
+    const workflow = createRouterWorkflow({
+      model: createRouterModel({ intent: "show_tasks" }),
+      plannerWorkflow: mockedPlannerWorkflow,
     });
 
     const result = await workflow.invoke(createRouterState());
 
-    expect(plannerWorkflow.invoke).not.toHaveBeenCalled();
+    expect(mockedPlannerWorkflow.invoke).not.toHaveBeenCalled();
     expect(result.response).toBe("show_tasks");
     expect(result.plan).toBeNull();
   });
@@ -149,17 +253,19 @@ describe("getOrInitRouterWorkflow", () => {
   it("keeps runtime composition inside the module", async () => {
     vi.resetModules();
 
-    const plannerWorkflow = {
+    const mockedPlannerWorkflow = {
       invoke: vi.fn().mockResolvedValue(createPlannerResult()),
     };
-    const getOrInitCheckpointer = vi.fn().mockResolvedValue({});
-    const getOrInitPlannerWorkflow = vi.fn().mockResolvedValue(plannerWorkflow);
-    const createRouterModelSpy = vi
+    const mockedGetOrInitCheckpointer = vi.fn().mockResolvedValue({});
+    const mockedGetOrInitPlannerWorkflow = vi
       .fn()
-      .mockReturnValue(createRouterModel("show_tasks"));
+      .mockResolvedValue(mockedPlannerWorkflow);
+    const mockedCreateRouterModelSpy = vi
+      .fn()
+      .mockReturnValue(createRouterModel({ intent: "show_tasks" }));
 
     vi.doMock("../../checkpointer.js", () => ({
-      getOrInitCheckpointer,
+      getOrInitCheckpointer: mockedGetOrInitCheckpointer,
     }));
     vi.doMock("../../planner-model/planner-workflow.js", async () => {
       const actual = await vi.importActual<
@@ -168,11 +274,11 @@ describe("getOrInitRouterWorkflow", () => {
 
       return {
         ...actual,
-        getOrInitPlannerWorkflow,
+        getOrInitPlannerWorkflow: mockedGetOrInitPlannerWorkflow,
       };
     });
     vi.doMock("../router-model.js", () => ({
-      createRouterModel: createRouterModelSpy,
+      createRouterModel: mockedCreateRouterModelSpy,
     }));
 
     const { getOrInitRouterWorkflow } = await import("../router-workflow.js");
@@ -181,28 +287,30 @@ describe("getOrInitRouterWorkflow", () => {
     const second = await getOrInitRouterWorkflow();
 
     expect(first).toBe(second);
-    expect(getOrInitCheckpointer).toHaveBeenCalledTimes(1);
-    expect(getOrInitPlannerWorkflow).toHaveBeenCalledTimes(1);
-    expect(createRouterModelSpy).toHaveBeenCalledTimes(1);
+    expect(mockedGetOrInitCheckpointer).toHaveBeenCalledTimes(1);
+    expect(mockedGetOrInitPlannerWorkflow).toHaveBeenCalledTimes(1);
+    expect(mockedCreateRouterModelSpy).toHaveBeenCalledTimes(1);
   });
 
   it("shares one in-flight initialization", async () => {
     vi.resetModules();
 
     const gate = createDeferred<object>();
-    const plannerWorkflow = {
+    const mockedPlannerWorkflow = {
       invoke: vi.fn().mockResolvedValue(createPlannerResult()),
     };
-    const getOrInitCheckpointer = vi
+    const mockedGetOrInitCheckpointer = vi
       .fn()
       .mockImplementation(() => gate.promise);
-    const getOrInitPlannerWorkflow = vi.fn().mockResolvedValue(plannerWorkflow);
-    const createRouterModelSpy = vi
+    const mockedGetOrInitPlannerWorkflow = vi
       .fn()
-      .mockReturnValue(createRouterModel("show_tasks"));
+      .mockResolvedValue(mockedPlannerWorkflow);
+    const mockedCreateRouterModelSpy = vi
+      .fn()
+      .mockReturnValue(createRouterModel({ intent: "show_tasks" }));
 
     vi.doMock("../../checkpointer.js", () => ({
-      getOrInitCheckpointer,
+      getOrInitCheckpointer: mockedGetOrInitCheckpointer,
     }));
     vi.doMock("../../planner-model/planner-workflow.js", async () => {
       const actual = await vi.importActual<
@@ -211,11 +319,11 @@ describe("getOrInitRouterWorkflow", () => {
 
       return {
         ...actual,
-        getOrInitPlannerWorkflow,
+        getOrInitPlannerWorkflow: mockedGetOrInitPlannerWorkflow,
       };
     });
     vi.doMock("../router-model.js", () => ({
-      createRouterModel: createRouterModelSpy,
+      createRouterModel: mockedCreateRouterModelSpy,
     }));
 
     const { getOrInitRouterWorkflow } = await import("../router-workflow.js");
@@ -223,32 +331,34 @@ describe("getOrInitRouterWorkflow", () => {
     const first = getOrInitRouterWorkflow();
     const second = getOrInitRouterWorkflow();
 
-    expect(getOrInitCheckpointer).toHaveBeenCalledTimes(1);
+    expect(mockedGetOrInitCheckpointer).toHaveBeenCalledTimes(1);
 
     gate.resolve({});
 
     await expect(first).resolves.toBe(await second);
-    expect(getOrInitPlannerWorkflow).toHaveBeenCalledTimes(1);
-    expect(createRouterModelSpy).toHaveBeenCalledTimes(1);
+    expect(mockedGetOrInitPlannerWorkflow).toHaveBeenCalledTimes(1);
+    expect(mockedCreateRouterModelSpy).toHaveBeenCalledTimes(1);
   });
 
   it("retries after a failed initialization", async () => {
     vi.resetModules();
 
-    const plannerWorkflow = {
+    const mockedPlannerWorkflow = {
       invoke: vi.fn().mockResolvedValue(createPlannerResult()),
     };
-    const getOrInitCheckpointer = vi
+    const mockedGetOrInitCheckpointer = vi
       .fn()
       .mockRejectedValueOnce(new Error("redis offline"))
       .mockResolvedValue({});
-    const getOrInitPlannerWorkflow = vi.fn().mockResolvedValue(plannerWorkflow);
-    const createRouterModelSpy = vi
+    const mockedGetOrInitPlannerWorkflow = vi
       .fn()
-      .mockReturnValue(createRouterModel("show_tasks"));
+      .mockResolvedValue(mockedPlannerWorkflow);
+    const mockedCreateRouterModelSpy = vi
+      .fn()
+      .mockReturnValue(createRouterModel({ intent: "show_tasks" }));
 
     vi.doMock("../../checkpointer.js", () => ({
-      getOrInitCheckpointer,
+      getOrInitCheckpointer: mockedGetOrInitCheckpointer,
     }));
     vi.doMock("../../planner-model/planner-workflow.js", async () => {
       const actual = await vi.importActual<
@@ -257,19 +367,19 @@ describe("getOrInitRouterWorkflow", () => {
 
       return {
         ...actual,
-        getOrInitPlannerWorkflow,
+        getOrInitPlannerWorkflow: mockedGetOrInitPlannerWorkflow,
       };
     });
     vi.doMock("../router-model.js", () => ({
-      createRouterModel: createRouterModelSpy,
+      createRouterModel: mockedCreateRouterModelSpy,
     }));
 
     const { getOrInitRouterWorkflow } = await import("../router-workflow.js");
 
     await expect(getOrInitRouterWorkflow()).rejects.toThrow("redis offline");
     await expect(getOrInitRouterWorkflow()).resolves.toBeDefined();
-    expect(getOrInitCheckpointer).toHaveBeenCalledTimes(2);
-    expect(getOrInitPlannerWorkflow).toHaveBeenCalledTimes(1);
-    expect(createRouterModelSpy).toHaveBeenCalledTimes(1);
+    expect(mockedGetOrInitCheckpointer).toHaveBeenCalledTimes(2);
+    expect(mockedGetOrInitPlannerWorkflow).toHaveBeenCalledTimes(1);
+    expect(mockedCreateRouterModelSpy).toHaveBeenCalledTimes(1);
   });
 });

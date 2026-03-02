@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { fromConnString } = vi.hoisted(() => ({
+const { fromConnString: mockedFromConnString } = vi.hoisted(() => ({
   fromConnString: vi.fn(),
 }));
 
 vi.mock("@langchain/langgraph-checkpoint-postgres/store", () => ({
   PostgresStore: {
-    fromConnString,
+    fromConnString: mockedFromConnString,
   },
 }));
 
@@ -18,12 +18,12 @@ describe("getOrInitStore", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     vi.resetModules();
-    fromConnString.mockReset();
+    mockedFromConnString.mockReset();
     process.env.DATABASE_URL = originalDatabaseUrl;
   });
 
   it("logs missing DATABASE_URL and throws", async () => {
-    const consoleErrorSpy = vi
+    const mockedConsoleErrorSpy = vi
       .spyOn(console, "error")
       .mockImplementation(() => {});
     const { getOrInitStore } = await loadModule();
@@ -33,7 +33,7 @@ describe("getOrInitStore", () => {
     await expect(getOrInitStore()).rejects.toThrow(
       "POSTGRES_URL or DATABASE_URL must be set",
     );
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
+    expect(mockedConsoleErrorSpy).toHaveBeenCalledWith(
       "AI engine Postgres initialization failed",
       expect.objectContaining({
         error: "POSTGRES_URL or DATABASE_URL must be set",
@@ -42,19 +42,19 @@ describe("getOrInitStore", () => {
   });
 
   it("logs Postgres setup failures and rethrows them", async () => {
-    const consoleErrorSpy = vi
+    const mockedConsoleErrorSpy = vi
       .spyOn(console, "error")
       .mockImplementation(() => {});
     const error = new Error("postgres offline");
     const { getOrInitStore } = await loadModule();
 
     process.env.DATABASE_URL = "postgres://db";
-    fromConnString.mockReturnValue({
+    mockedFromConnString.mockReturnValue({
       setup: vi.fn().mockRejectedValueOnce(error),
     });
 
     await expect(getOrInitStore()).rejects.toBe(error);
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
+    expect(mockedConsoleErrorSpy).toHaveBeenCalledWith(
       "AI engine Postgres initialization failed",
       expect.objectContaining({
         error: "postgres offline",
@@ -69,7 +69,7 @@ describe("getOrInitStore", () => {
     };
     const { getOrInitStore } = await loadModule();
 
-    fromConnString.mockReturnValue(store);
+    mockedFromConnString.mockReturnValue(store);
 
     const first = getOrInitStore();
     const second = getOrInitStore();
@@ -77,7 +77,7 @@ describe("getOrInitStore", () => {
     await expect(first).resolves.toBe(store);
     await expect(second).resolves.toBe(store);
     await expect(getOrInitStore()).resolves.toBe(store);
-    expect(fromConnString).toHaveBeenCalledTimes(1);
+    expect(mockedFromConnString).toHaveBeenCalledTimes(1);
     expect(store.setup).toHaveBeenCalledTimes(1);
   });
 
@@ -89,7 +89,7 @@ describe("getOrInitStore", () => {
     };
     const { getOrInitStore } = await loadModule();
 
-    fromConnString
+    mockedFromConnString
       .mockReturnValueOnce({
         setup: vi.fn().mockRejectedValueOnce(error),
       })
@@ -97,6 +97,6 @@ describe("getOrInitStore", () => {
 
     await expect(getOrInitStore()).rejects.toBe(error);
     await expect(getOrInitStore()).resolves.toBe(workingStore);
-    expect(fromConnString).toHaveBeenCalledTimes(2);
+    expect(mockedFromConnString).toHaveBeenCalledTimes(2);
   });
 });

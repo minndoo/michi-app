@@ -9,7 +9,8 @@ export const plannerModelOutputSchema = z.discriminatedUnion("intent", [
   }),
   z.object({
     intent: z.literal("refuse_plan"),
-    reason: z.string().trim().min(1).optional(),
+    reason: z.string().trim().min(1),
+    proposals: z.array(z.string().trim().min(1)).min(1),
   }),
 ]);
 
