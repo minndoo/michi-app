@@ -10,7 +10,7 @@ vi.mock("@langchain/langgraph-checkpoint-postgres/store", () => ({
   },
 }));
 
-const loadModule = async () => import("../store.js");
+const loadModule = async () => import("../persistence/store.js");
 
 describe("getOrInitStore", () => {
   const originalDatabaseUrl = process.env.DATABASE_URL;
@@ -30,13 +30,11 @@ describe("getOrInitStore", () => {
 
     delete process.env.DATABASE_URL;
 
-    await expect(getOrInitStore()).rejects.toThrow(
-      "POSTGRES_URL or DATABASE_URL must be set",
-    );
+    await expect(getOrInitStore()).rejects.toThrow("DATABASE_URL must be set");
     expect(mockedConsoleErrorSpy).toHaveBeenCalledWith(
       "AI engine Postgres initialization failed",
       expect.objectContaining({
-        error: "POSTGRES_URL or DATABASE_URL must be set",
+        error: "DATABASE_URL must be set",
       }),
     );
   });
@@ -64,8 +62,9 @@ describe("getOrInitStore", () => {
 
   it("shares one in-flight initialization and caches success", async () => {
     process.env.DATABASE_URL = "postgres://db";
+    const mockedSetup = vi.fn().mockResolvedValue(undefined);
     const store = {
-      setup: vi.fn().mockResolvedValue(undefined),
+      setup: mockedSetup,
     };
     const { getOrInitStore } = await loadModule();
 
@@ -78,14 +77,15 @@ describe("getOrInitStore", () => {
     await expect(second).resolves.toBe(store);
     await expect(getOrInitStore()).resolves.toBe(store);
     expect(mockedFromConnString).toHaveBeenCalledTimes(1);
-    expect(store.setup).toHaveBeenCalledTimes(1);
+    expect(mockedSetup).toHaveBeenCalledTimes(1);
   });
 
   it("retries after a failed initialization", async () => {
     process.env.DATABASE_URL = "postgres://db";
     const error = new Error("postgres offline");
+    const mockedSetup = vi.fn().mockResolvedValue(undefined);
     const workingStore = {
-      setup: vi.fn().mockResolvedValue(undefined),
+      setup: mockedSetup,
     };
     const { getOrInitStore } = await loadModule();
 

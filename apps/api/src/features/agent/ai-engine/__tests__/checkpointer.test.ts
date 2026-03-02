@@ -10,7 +10,7 @@ vi.mock("@langchain/langgraph-checkpoint-redis", () => ({
   },
 }));
 
-const loadModule = async () => import("../checkpointer.js");
+const loadModule = async () => import("../persistence/checkpointer.js");
 
 describe("getOrInitCheckpointer", () => {
   beforeEach(() => {
@@ -31,10 +31,6 @@ describe("getOrInitCheckpointer", () => {
     await expect(getOrInitCheckpointer()).rejects.toBe(error);
     expect(mockedConsoleErrorSpy).toHaveBeenCalledWith(
       "AI engine Redis initialization failed",
-      expect.objectContaining({
-        error: "redis offline",
-        redisUrl: "redis://127.0.0.1:6379",
-      }),
     );
   });
 

@@ -27,19 +27,6 @@ export interface AgentMessageInput extends AgentInput {
   message: string;
 }
 
-export interface UserGoalPlanInput {
-  goal: string;
-  dueDate: string;
-  baseline: string;
-  startDate: string;
-}
-
-export interface AgentPlanGoalInput extends AgentInput {
-  planGoalInput: UserGoalPlanInput;
-}
-
-export type PartialUserGoalPlanInput = Partial<UserGoalPlanInput>;
-
 export interface AgentPlannedGoal {
   title: string;
   description?: string | null;
@@ -62,13 +49,6 @@ export interface AgentMessageResponse {
   routedIntent: RoutedIntent;
   response: string;
   plannerAction?: PlannerAction;
-  refusal?: AgentRefusal;
-}
-
-export interface AgentPlanGoalResponse {
-  routedIntent: RoutedIntent;
-  response: string;
-  plannerAction?: PlannerAction;
   plan?: AgentPlannedGoalWithTasks;
   refusal?: AgentRefusal;
 }
@@ -83,4 +63,43 @@ export interface AgentEngineResult {
   plannerAction?: PlannerAction;
   plan?: AgentPlannedGoalWithTasks;
   refusal?: AgentRefusal;
+}
+
+export interface PlanningSharedState {
+  threadId: string;
+  userId: string;
+  referenceDate: string;
+  timezone: string;
+}
+
+export type PlanningStage = "intake" | "preparation" | "generation";
+
+export interface PlanIntakeAccepted {
+  goal: string;
+  baseline: string;
+  startDate?: string;
+  relativeStartDate?: string;
+  dueDate?: string;
+  relativeDueDate?: string;
+  daysWeeklyFrequency: number;
+}
+
+export interface PlanIntakeDenied {
+  reason: string;
+  missingFields: string[];
+}
+
+export interface PlanPreparationAccepted {
+  goal: string;
+  baseline: string;
+  startDate: string;
+  dueDate: string;
+  daysWeeklyFrequency: number;
+  goalDerivedValue: number;
+  baselineDerivedValue: number;
+  goalBaselineGap: number;
+}
+
+export interface PlanPreparationWaiting {
+  clarifyingQuestions: string[];
 }

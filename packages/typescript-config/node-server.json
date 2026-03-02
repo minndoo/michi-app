@@ -5,9 +5,9 @@
     "noEmit": false,
     "module": "ESNext",
     "moduleResolution": "Bundler",
-    "target": "ES2023",
+    "target": "ES2024",
     "sourceMap": true,
-    "lib": ["ES2023"],
+    "lib": ["ES2024"],
     "types": ["node"]
   }
 }

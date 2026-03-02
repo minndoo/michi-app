@@ -1,116 +1,42 @@
 "use client";
 
 import { useState } from "react";
-import { Button, H1, Input, Text, TextArea, YStack } from "@repo/ui";
-import {
-  usePostAgentMessage,
-  usePostAgentPlanGoal,
-} from "@/lib/api/generated/agent/agent";
+import { Button, H1, Text, TextArea, YStack } from "@repo/ui";
+import { usePostAgentMessage } from "@/lib/api/generated/agent/agent";
 import type {
   AgentMessageInput,
   AgentMessageResponse,
-  AgentPlanGoalInput,
-  AgentPlanGoalResponse,
 } from "@/lib/api/generated/model";
 
 const fallbackTimezone = "UTC";
 const aiTestThreadId = "ai-test-thread";
 
-type AiTestResult = AgentPlanGoalResponse | AgentMessageResponse;
-type ResultSource = "plan-goal" | "message" | null;
+type AiTestResult = AgentMessageResponse;
 
 const getTimezone = (): string =>
   Intl.DateTimeFormat().resolvedOptions().timeZone || fallbackTimezone;
 
 export const AiTestScreen = () => {
-  const [goal, setGoal] = useState("");
-  const [dueDate, setDueDate] = useState("");
-  const [baseline, setBaseline] = useState("");
-  const [startDate, setStartDate] = useState("");
   const [message, setMessage] = useState("");
   const [result, setResult] = useState<AiTestResult | null>(null);
-  const [resultSource, setResultSource] = useState<ResultSource>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const plan = result && "plan" in result ? result.plan : undefined;
-  const refusal = result && "refusal" in result ? result.refusal : undefined;
+  const plan = result?.plan;
+  const refusal = result?.refusal;
 
-  const planGoalMutation = usePostAgentPlanGoal({
-    mutation: {
-      onSuccess: (response) => {
-        setResult(response.data);
-        setResultSource("plan-goal");
-        setErrorMessage(null);
-      },
-      onError: (error) => {
-        setResult(null);
-        setResultSource(null);
-        setErrorMessage(
-          error instanceof Error ? error.message : "Request failed",
-        );
-      },
-    },
-  });
   const messageMutation = usePostAgentMessage({
     mutation: {
       onSuccess: (response) => {
         setResult(response.data);
-        setResultSource("message");
         setErrorMessage(null);
       },
       onError: (error) => {
         setResult(null);
-        setResultSource(null);
         setErrorMessage(
           error instanceof Error ? error.message : "Request failed",
         );
       },
     },
   });
-
-  const handlePlanGoalSubmit = () => {
-    const trimmedGoal = goal.trim();
-    const trimmedDueDate = dueDate.trim();
-    const trimmedBaseline = baseline.trim();
-    const trimmedStartDate = startDate.trim();
-
-    if (
-      !trimmedGoal ||
-      !trimmedDueDate ||
-      !trimmedBaseline ||
-      !trimmedStartDate
-    ) {
-      return;
-    }
-
-    const parsedDueDate = new Date(trimmedDueDate);
-    const parsedStartDate = new Date(trimmedStartDate);
-
-    if (Number.isNaN(parsedDueDate.getTime())) {
-      setErrorMessage("Due date must be a valid date.");
-      setResult(null);
-      setResultSource(null);
-      return;
-    }
-
-    if (Number.isNaN(parsedStartDate.getTime())) {
-      setErrorMessage("Start date must be a valid date.");
-      setResult(null);
-      setResultSource(null);
-      return;
-    }
-
-    const payload: AgentPlanGoalInput = {
-      timezone: getTimezone(),
-      planGoalInput: {
-        goal: trimmedGoal,
-        dueDate: parsedDueDate.toISOString(),
-        baseline: trimmedBaseline,
-        startDate: parsedStartDate.toISOString(),
-      },
-    };
-
-    planGoalMutation.mutate({ data: payload });
-  };
 
   const handleMessageSubmit = () => {
     const trimmedMessage = message.trim();
@@ -131,36 +57,6 @@ export const AiTestScreen = () => {
   return (
     <YStack gap="$4" width="100%" maxW="$screen.md" py="$4">
       <H1 color="$color8">AI Test</H1>
-      <YStack gap="$3">
-        <Text color="$color11">Structured planning</Text>
-        <Input placeholder="Goal" value={goal} onChangeText={setGoal} />
-        <Input
-          placeholder="Due date (YYYY-MM-DD)"
-          value={dueDate}
-          onChangeText={setDueDate}
-        />
-        <Input
-          placeholder="Baseline"
-          value={baseline}
-          onChangeText={setBaseline}
-        />
-        <Input
-          placeholder="Start date (YYYY-MM-DD)"
-          value={startDate}
-          onChangeText={setStartDate}
-        />
-        <Button
-          onPress={handlePlanGoalSubmit}
-          disabled={planGoalMutation.isPending}
-        >
-          <Text color="inherit">
-            {planGoalMutation.isPending
-              ? "Sending..."
-              : "Submit structured plan"}
-          </Text>
-        </Button>
-      </YStack>
-
       <YStack gap="$3">
         <Text color="$color11">Plain input</Text>
         <TextArea
@@ -183,14 +79,6 @@ export const AiTestScreen = () => {
 
       {result ? (
         <YStack gap="$2" p="$3" rounded="$3" bg="$backgroundPress">
-          {resultSource ? (
-            <Text color="$color11">
-              Source:{" "}
-              {resultSource === "plan-goal"
-                ? "Structured planning"
-                : "Plain input"}
-            </Text>
-          ) : null}
           <Text color="$color11">Intent: {result.routedIntent}</Text>
           {result.plannerAction ? (
             <Text color="$color11">Planner action: {result.plannerAction}</Text>
@@ -218,7 +106,7 @@ export const AiTestScreen = () => {
                 <Text color="$color11">Goal due: {plan.goal.dueAt}</Text>
               ) : null}
               <YStack gap="$1">
-                {plan.tasks.map((task, index) => (
+                {plan.tasks?.map((task, index) => (
                   <YStack key={`${task.title}-${index}`} gap="$1">
                     <Text color="$color12">
                       Task {index + 1}: {task.title}

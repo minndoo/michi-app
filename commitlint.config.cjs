@@ -8,5 +8,6 @@ module.exports = {
   ],
   rules: {
     'scope-enum': [2, 'always', ['ai-engine', 'database']],
+    'scope-empty': [0]
   },
 };

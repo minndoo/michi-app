@@ -25,7 +25,7 @@ export const getOrInitStore = async (): Promise<PostgresStore> => {
       const connectionString = process.env.DATABASE_URL;
 
       if (!connectionString) {
-        const error = new Error("POSTGRES_URL or DATABASE_URL must be set");
+        const error = new Error("DATABASE_URL must be set");
 
         console.error("AI engine Postgres initialization failed", {
           error: getErrorMessage(error),

@@ -3,25 +3,22 @@ import type {
   AgentEngineResult,
   AgentMessageInput,
   AgentMessageResponse,
-  AgentPlanGoalInput,
-  AgentPlanGoalResponse,
-  UserGoalPlanInput,
 } from "./agent.types.js";
 
-// TODO(AI Engine - Context engineering): ThreadID logic, creation and their persistence
 type AgentServiceDeps = {
   engine: {
+    invokePlanner: (args: {
+      input: string;
+      requireCheckpoint?: boolean;
+      threadId: string;
+      userId: string;
+      timezone: string;
+    }) => Promise<AgentEngineResult>;
     invokeRouter: (args: {
       input: string;
       threadId: string;
       userId: string;
       timezone: string;
-    }) => Promise<AgentEngineResult>;
-    planGoal: (args: {
-      threadId?: string | null;
-      timezone: string;
-      userId: string;
-      userGoalPlanInput: UserGoalPlanInput;
     }) => Promise<AgentEngineResult>;
   };
 };
@@ -49,22 +46,25 @@ class AgentService {
       routedIntent: result.routedIntent,
       response: result.response,
       ...(result.plannerAction ? { plannerAction: result.plannerAction } : {}),
+      ...(result.plan ? { plan: result.plan } : {}),
       ...(result.refusal ? { refusal: result.refusal } : {}),
     };
   }
 
-  async planGoal(
+  async continuePlan(
     userId: string,
-    input: AgentPlanGoalInput,
-  ): Promise<AgentPlanGoalResponse> {
-    const result = await this.deps.engine.planGoal({
+    input: AgentMessageInput,
+  ): Promise<AgentMessageResponse> {
+    const result = await this.deps.engine.invokePlanner({
       userId,
+      input: input.message,
+      requireCheckpoint: true,
       threadId: input.threadId,
       timezone: input.timezone,
-      userGoalPlanInput: input.planGoalInput,
     });
 
     return {
+      threadId: input.threadId,
       routedIntent: result.routedIntent,
       response: result.response,
       ...(result.plannerAction ? { plannerAction: result.plannerAction } : {}),

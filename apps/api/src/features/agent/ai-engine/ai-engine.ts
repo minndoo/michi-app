@@ -1,11 +1,15 @@
-import type { AgentEngineResult, UserGoalPlanInput } from "../agent.types.js";
-import type { PlannedGoalWithTasks } from "./agent.schemas.js";
+import type { AgentEngineResult, PlanningSharedState } from "../agent.types.js";
+import type {
+  PlannerWorkflow,
+  PlannerWorkflowInput,
+  PlannerWorkflowState,
+} from "./workflows/planner-workflow/planner-workflow.js";
+import { getOrInitPlannerWorkflow } from "./workflows/planner-workflow/planner-workflow.js";
 import type {
   RouterWorkflow,
   RouterWorkflowInput,
-  RouterWorkflowState,
-} from "./router-model/router-workflow.js";
-import { getOrInitRouterWorkflow } from "./router-model/router-workflow.js";
+} from "./workflows/router-workflow/router-workflow.js";
+import { getOrInitRouterWorkflow } from "./workflows/router-workflow/router-workflow.js";
 
 type InvokeArgs = {
   input: string;
@@ -14,23 +18,18 @@ type InvokeArgs = {
   timezone: string;
 };
 
-type EngineRunArgs = InvokeArgs & {
-  threadId: string;
-};
-
-type PlanGoalArgs = {
-  threadId?: string | null;
-  timezone: string;
-  userId: string;
-  userGoalPlanInput: UserGoalPlanInput;
+type InvokePlannerArgs = InvokeArgs & {
+  requireCheckpoint?: boolean;
 };
 
 type AiEngineDeps = {
   routerWorkflow?: RouterWorkflow;
+  plannerWorkflow?: PlannerWorkflow;
   factories?: Partial<AiEngineFactories>;
 };
 
 type AiEngineFactories = {
+  getOrInitPlannerWorkflow: typeof getOrInitPlannerWorkflow;
   getOrInitRouterWorkflow: typeof getOrInitRouterWorkflow;
 };
 
@@ -56,103 +55,136 @@ export class AiEngineUnavailableError extends Error {
   }
 }
 
-const createBaseRouterState = ({
+// TODO(agent): Recompute this per request once planner continuation loads state
+// from persisted memory/checkpoints instead of relying on fresh invocation input.
+const referenceDate = new Date().toISOString();
+
+const createSharedState = ({
   threadId,
   userId,
   timezone,
 }: Pick<
   InvokeArgs,
   "threadId" | "userId" | "timezone"
->): RouterWorkflowInput => ({
+>): PlanningSharedState => ({
   threadId,
   userId,
-  input: "",
+  referenceDate,
   timezone,
 });
 
 const createRouterState = (args: InvokeArgs): RouterWorkflowInput => ({
-  ...createBaseRouterState({
-    threadId: args.threadId,
-    userId: args.userId,
-    timezone: args.timezone,
-  }),
+  ...createSharedState(args),
   input: args.input,
+  intent: null,
 });
 
-// TODO(AI Engine): make threadId mandatory
-const createPlanGoalState = (args: PlanGoalArgs): RouterWorkflowInput => ({
-  ...createBaseRouterState({
-    threadId: args.threadId ?? args.userId,
-    userId: args.userId,
-    timezone: args.timezone,
-  }),
-  input: args.userGoalPlanInput.goal,
-  userGoalPlanInput: args.userGoalPlanInput,
+const createPlannerState = (args: InvokeArgs): PlannerWorkflowInput => ({
+  ...createSharedState(args),
+  input: args.input,
+  // TODO(agent): Load planner continuation state from persisted memory/checkpoints
+  // instead of relying on fresh invocation input during further memory work.
+  routedIntent: "plan_goal",
+});
+
+const createMissingCheckpointResult = (): AgentEngineResult => ({
+  routedIntent: "plan_goal",
+  plannerAction: "refuse_plan",
+  response: "No saved planning session exists for this thread.",
+  refusal: {
+    reason: "No saved planning session exists for this thread.",
+    proposals: [
+      "Start a new planning request from /message.",
+      "Continue with a thread that already has planner state.",
+    ],
+  },
 });
 
 export class AiEngine {
+  private plannerWorkflow: PlannerWorkflow | null;
   private routerWorkflow: RouterWorkflow | null;
-  private initPromise: Promise<void> | null = null;
   private readonly factories: AiEngineFactories;
 
   constructor(deps: AiEngineDeps = {}) {
     this.routerWorkflow = deps.routerWorkflow ?? null;
+    this.plannerWorkflow = deps.plannerWorkflow ?? null;
     this.factories = {
+      getOrInitPlannerWorkflow,
       getOrInitRouterWorkflow,
       ...deps.factories,
     };
   }
 
-  private async initialize(): Promise<void> {
-    this.routerWorkflow = await this.factories.getOrInitRouterWorkflow();
-  }
-
-  private async getOrInit(args: InvokeArgs): Promise<void> {
-    if (this.routerWorkflow) {
-      return;
-    }
-
-    if (!this.initPromise) {
-      this.initPromise = this.initialize().catch((error: unknown) => {
-        console.error("AI engine initialization failed", {
-          error: getErrorMessage(error),
-          threadId: args.userId,
-          userId: args.userId,
-        });
-
-        this.routerWorkflow = null;
-
-        throw new AiEngineUnavailableError(
-          "Agent service temporarily unavailable",
-          error,
-        );
-      });
+  private async getPlannerWorkflow(args: InvokeArgs): Promise<PlannerWorkflow> {
+    if (this.plannerWorkflow) {
+      return this.plannerWorkflow;
     }
 
     try {
-      await this.initPromise;
-    } finally {
-      this.initPromise = null;
-    }
+      const workflow = await this.factories.getOrInitPlannerWorkflow();
+      this.plannerWorkflow = workflow;
 
-    if (!this.routerWorkflow) {
+      return workflow;
+    } catch (error: unknown) {
+      console.error("AI engine planner initialization failed", {
+        error: getErrorMessage(error),
+        threadId: args.threadId,
+        userId: args.userId,
+      });
+
       throw new AiEngineUnavailableError(
         "Agent service temporarily unavailable",
-        new Error("Router workflow is not initialized"),
+        error,
       );
     }
   }
 
-  private logPlannerOutcome(
-    args: EngineRunArgs,
-    result: RouterWorkflowState,
-  ): void {
-    if (result.intent !== "plan_goal") {
-      return;
+  private async getRouterWorkflow(args: InvokeArgs): Promise<RouterWorkflow> {
+    if (this.routerWorkflow) {
+      return this.routerWorkflow;
     }
 
+    try {
+      const workflow = await this.factories.getOrInitRouterWorkflow();
+      this.routerWorkflow = workflow;
+
+      return workflow;
+    } catch (error: unknown) {
+      console.error("AI engine router initialization failed", {
+        error: getErrorMessage(error),
+        threadId: args.threadId,
+        userId: args.userId,
+      });
+
+      throw new AiEngineUnavailableError(
+        "Agent service temporarily unavailable",
+        error,
+      );
+    }
+  }
+
+  private async hasPlannerCheckpoint(args: InvokeArgs): Promise<boolean> {
+    const plannerWorkflow = await this.getPlannerWorkflow(args);
+    const snapshot = await plannerWorkflow.getState({
+      configurable: {
+        checkpoint_ns: args.userId,
+        thread_id: args.threadId,
+      },
+    });
+
+    return snapshot.createdAt != null || snapshot.metadata != null;
+  }
+
+  private logPlannerOutcome(
+    args: InvokeArgs,
+    result: PlannerWorkflowState,
+  ): void {
     if (result.plannerAction === "create_plan" && result.plan) {
-      this.logPlanSuccess(args, result.plan);
+      console.log("AI engine plan_goal success", {
+        plan: JSON.stringify(result.plan, null, 2),
+        threadId: args.threadId,
+        userId: args.userId,
+      });
       return;
     }
 
@@ -170,89 +202,55 @@ export class AiEngine {
     });
   }
 
-  private logPlanSuccess(
-    args: EngineRunArgs,
-    plan: PlannedGoalWithTasks,
-  ): void {
-    console.log("AI engine plan_goal success", {
-      plan: JSON.stringify(plan, null, 2),
-      threadId: args.threadId,
-      userId: args.userId,
-    });
+  async invokePlanner(args: InvokePlannerArgs): Promise<AgentEngineResult> {
+    const plannerWorkflow = await this.getPlannerWorkflow(args);
+
+    if (args.requireCheckpoint && !(await this.hasPlannerCheckpoint(args))) {
+      return createMissingCheckpointResult();
+    }
+
+    const plannerState = await plannerWorkflow.invoke(
+      createPlannerState(args),
+      {
+        configurable: {
+          thread_id: args.threadId,
+          checkpoint_ns: args.userId,
+        },
+      },
+    );
+
+    this.logPlannerOutcome(args, plannerState);
+
+    return {
+      routedIntent: "plan_goal",
+      response: plannerState.response || "plan_goal",
+      ...(plannerState.plannerAction
+        ? { plannerAction: plannerState.plannerAction }
+        : {}),
+      ...(plannerState.plan ? { plan: plannerState.plan } : {}),
+      ...(plannerState.refusal ? { refusal: plannerState.refusal } : {}),
+    };
   }
 
   async invokeRouter(args: InvokeArgs): Promise<AgentEngineResult> {
-    await this.getOrInit(args);
+    const routerWorkflow = await this.getRouterWorkflow(args);
 
     const state = createRouterState(args);
-
-    const result = await this.routerWorkflow!.invoke(state, {
+    const routerResult = await routerWorkflow.invoke(state, {
       configurable: {
-        thread_id: state.threadId ?? args.userId,
+        thread_id: state.threadId,
         checkpoint_ns: args.userId,
       },
     });
+    const routedIntent = routerResult.intent ?? "refuse";
 
-    const routedIntent = result.intent ?? "refuse";
+    if (routedIntent !== "plan_goal") {
+      return {
+        routedIntent,
+        response: routedIntent,
+      };
+    }
 
-    this.logPlannerOutcome(
-      {
-        input: state.input ?? args.input,
-        threadId: state.threadId ?? args.threadId,
-        userId: args.userId,
-        timezone: args.timezone,
-      },
-      result,
-    );
-
-    return {
-      routedIntent,
-      response: result.response || routedIntent,
-      ...(routedIntent === "plan_goal" && result.plannerAction
-        ? {
-            plannerAction: result.plannerAction,
-            ...(result.plan ? { plan: result.plan } : {}),
-            ...(result.refusal ? { refusal: result.refusal } : {}),
-          }
-        : {}),
-    };
-  }
-
-  async planGoal(args: PlanGoalArgs): Promise<AgentEngineResult> {
-    const state = createPlanGoalState(args);
-
-    await this.getOrInit({
-      input: state.input ?? args.userGoalPlanInput.goal,
-      threadId: state.threadId ?? args.threadId ?? args.userId,
-      userId: args.userId,
-      timezone: args.timezone,
-    });
-
-    const result = await this.routerWorkflow!.invoke(state, {
-      configurable: {
-        thread_id: state.threadId ?? args.userId,
-        checkpoint_ns: args.userId,
-      },
-    });
-
-    const routedIntent = result.intent ?? "refuse";
-
-    this.logPlannerOutcome(
-      {
-        input: state.input ?? args.userGoalPlanInput.goal,
-        threadId: state.threadId ?? args.threadId ?? args.userId,
-        userId: args.userId,
-        timezone: args.timezone,
-      },
-      result,
-    );
-
-    return {
-      routedIntent,
-      response: result.response || routedIntent,
-      ...(result.plannerAction ? { plannerAction: result.plannerAction } : {}),
-      ...(result.plan ? { plan: result.plan } : {}),
-      ...(result.refusal ? { refusal: result.refusal } : {}),
-    };
+    return this.invokePlanner(args);
   }
 }

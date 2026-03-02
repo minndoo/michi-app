@@ -11,12 +11,7 @@ import {
 } from "@tsoa/runtime";
 import { createHttpError } from "../../helpers/http.js";
 import { agentService } from "./agent.service.js";
-import type {
-  AgentMessageInput,
-  AgentMessageResponse,
-  AgentPlanGoalInput,
-  AgentPlanGoalResponse,
-} from "./agent.types.js";
+import type { AgentMessageInput, AgentMessageResponse } from "./agent.types.js";
 
 const getUserId = (request: ExpressRequest): string => {
   const userId = request.user?.id;
@@ -50,16 +45,16 @@ export class AgentController extends Controller {
     }
   }
 
-  @Post("plan-goal")
-  @OperationId("postAgentPlanGoal")
-  public async postAgentPlanGoal(
+  @Post("continue-plan")
+  @OperationId("postAgentContinuePlan")
+  public async postAgentContinuePlan(
     @Request() request: ExpressRequest,
-    @Body() body: AgentPlanGoalInput,
-  ): Promise<AgentPlanGoalResponse> {
+    @Body() body: AgentMessageInput,
+  ): Promise<AgentMessageResponse> {
     const userId = getUserId(request);
 
     try {
-      return await agentService.planGoal(userId, body);
+      return await agentService.continuePlan(userId, body);
     } catch (error) {
       if (error instanceof AiEngineUnavailableError) {
         throw createHttpError(503, "Agent service temporarily unavailable");
