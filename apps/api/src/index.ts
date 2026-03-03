@@ -12,6 +12,8 @@ import { ValidateError } from "@tsoa/runtime";
 import { checkJwt } from "./middleware/checkJwt.js";
 import { corsMiddleware } from "./middleware/cors.js";
 import { ensureUserExists } from "./middleware/syncUser.js";
+import { registerAgentStreamRoutes } from "./features/agent/agent.stream.js";
+import { startAgentWorker } from "./features/agent/agent.worker.js";
 import { RegisterRoutes } from "./generated/routes.js";
 
 // Load environment variables
@@ -82,7 +84,14 @@ app.use((req: Request, res: Response, next) => {
 // Ensure authenticated users exist in database
 app.use(ensureUserExists);
 
+registerAgentStreamRoutes(app);
+
 RegisterRoutes(app);
+
+void startAgentWorker().catch((error) => {
+  const message = error instanceof Error ? error.message : String(error);
+  console.error("Agent worker startup failed", { error: message });
+});
 
 // 404 handler
 app.use((_req: Request, res: Response) => {

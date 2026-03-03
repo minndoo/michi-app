@@ -1,4 +1,5 @@
 import { Annotation, END, START, StateGraph } from "@langchain/langgraph";
+import type { RunnableConfig } from "@langchain/core/runnables";
 import type { PostgresStore } from "@langchain/langgraph-checkpoint-postgres/store";
 import type { RedisSaver } from "@langchain/langgraph-checkpoint-redis";
 import type {
@@ -58,19 +59,30 @@ export type PlannerWorkflowInput = PlanningSharedState & {
   refusal?: AgentRefusal | null;
 };
 export type PlannerWorkflowState = PlannerState;
+type PlannerWorkflowConfig = RunnableConfig & {
+  configurable?: {
+    checkpoint_ns?: string;
+    thread_id: string;
+  };
+  streamMode?: "updates";
+};
 export type PlannerWorkflow = {
   invoke: (
     state: PlannerWorkflowInput,
     config?: {
       configurable?: {
-        checkpoint_ns: string;
+        checkpoint_ns?: string;
         thread_id: string;
       };
     },
   ) => Promise<PlannerWorkflowState>;
+  stream: (
+    state: PlannerWorkflowInput,
+    config?: PlannerWorkflowConfig,
+  ) => Promise<AsyncIterable<unknown>>;
   getState: (config: {
     configurable?: {
-      checkpoint_ns: string;
+      checkpoint_ns?: string;
       thread_id: string;
     };
   }) => Promise<{

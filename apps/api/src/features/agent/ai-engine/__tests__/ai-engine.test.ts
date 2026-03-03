@@ -4,22 +4,7 @@ import type {
   PlannerWorkflow,
   PlannerWorkflowState,
 } from "../workflows/planner-workflow/planner-workflow.js";
-import type {
-  RouterWorkflow,
-  RouterWorkflowState,
-} from "../workflows/router-workflow/router-workflow.js";
-
-const createRouterState = (
-  overrides: Partial<RouterWorkflowState> = {},
-): RouterWorkflowState => ({
-  threadId: "thread-1",
-  userId: "user-1",
-  referenceDate: "2026-03-02T00:00:00.000Z",
-  input: "Plan my fitness goal",
-  timezone: "Europe/Warsaw",
-  intent: "refuse",
-  ...overrides,
-});
+import type { RouterWorkflow } from "../workflows/router-workflow/router-workflow.js";
 
 const createPlannerState = (
   overrides: Partial<PlannerWorkflowState> = {},
@@ -49,362 +34,326 @@ const createPlannerWorkflowDouble = (
       values: {},
     }),
     invoke: vi.fn().mockResolvedValue(createPlannerState()),
+    stream: vi.fn().mockResolvedValue((async function* () {})()),
     ...overrides,
   }) as never;
 
-const createDeferred = <T>() => {
-  let resolve!: (value: T | PromiseLike<T>) => void;
-  let reject!: (reason?: unknown) => void;
-
-  const promise = new Promise<T>((innerResolve, innerReject) => {
-    resolve = innerResolve;
-    reject = innerReject;
-  });
-
-  return { promise, reject, resolve };
-};
-
-const createCachedFactory = <T>(promise: Promise<T>) => {
-  let inFlight: Promise<T> | null = null;
-
-  return vi.fn(() => {
-    if (!inFlight) {
-      inFlight = promise;
+const createStream = (...chunks: unknown[]): AsyncIterable<unknown> =>
+  (async function* () {
+    for (const chunk of chunks) {
+      yield chunk;
     }
-
-    return inFlight;
-  });
-};
+  })();
 
 describe("AiEngine", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
   });
 
-  it("can be instantiated with injected workflows", async () => {
+  it("streams router domain events for non-plan intents", async () => {
     const mockedRouterWorkflow: RouterWorkflow = {
-      invoke: vi.fn().mockResolvedValue(
-        createRouterState({
-          intent: "show_tasks",
+      invoke: vi.fn(),
+      stream: vi.fn().mockResolvedValue(
+        createStream({
+          llmCallRouter: {
+            intent: "show_tasks",
+          },
         }),
       ),
     };
-    const mockedPlannerWorkflow = createPlannerWorkflowDouble({
-      invoke: vi.fn(),
-    });
 
     const engine = new AiEngine({
       routerWorkflow: mockedRouterWorkflow,
-      plannerWorkflow: mockedPlannerWorkflow,
+      plannerWorkflow: createPlannerWorkflowDouble(),
     });
 
-    const result = await engine.invokeRouter({
+    const events = [];
+
+    for await (const event of engine.streamRouter({
+      jobId: "job-1",
+      jobType: "message",
       input: "show tasks",
-      threadId: "user-1",
+      threadId: "thread-1",
       userId: "user-1",
       timezone: "Europe/Warsaw",
-    });
+    })) {
+      events.push(event);
+    }
 
-    expect(result).toEqual({
-      routedIntent: "show_tasks",
-      response: "show_tasks",
-    });
-    expect(mockedRouterWorkflow.invoke).toHaveBeenCalledWith(
-      expect.objectContaining({
-        threadId: "user-1",
-        input: "show tasks",
-        timezone: "Europe/Warsaw",
-      }),
+    expect(events).toEqual([
       {
-        configurable: {
-          checkpoint_ns: "user-1",
-          thread_id: "user-1",
+        type: "router_started",
+        jobId: "job-1",
+        jobType: "message",
+        threadId: "thread-1",
+      },
+      {
+        type: "router_intent_resolved",
+        jobId: "job-1",
+        jobType: "message",
+        threadId: "thread-1",
+        routedIntent: "show_tasks",
+      },
+      {
+        type: "result",
+        jobId: "job-1",
+        jobType: "message",
+        threadId: "thread-1",
+        response: {
+          threadId: "thread-1",
+          routedIntent: "show_tasks",
+          response: "show_tasks",
         },
       },
-    );
-    expect(mockedPlannerWorkflow.invoke).not.toHaveBeenCalled();
+    ]);
   });
 
-  it("invokes planner workflow when router classifies plan_goal", async () => {
+  it("streams planner stage domain events for plan_goal", async () => {
     const mockedRouterWorkflow: RouterWorkflow = {
-      invoke: vi.fn().mockResolvedValue(
-        createRouterState({
-          intent: "plan_goal",
+      invoke: vi.fn(),
+      stream: vi.fn().mockResolvedValue(
+        createStream({
+          llmCallRouter: {
+            intent: "plan_goal",
+          },
         }),
       ),
     };
     const mockedPlannerWorkflow = createPlannerWorkflowDouble({
-      invoke: vi.fn().mockResolvedValue(
-        createPlannerState({
-          response: "Created a plan with 2 tasks.",
-          plannerAction: "create_plan",
-          plan: {
-            goal: {
-              title: "Run a 10k",
+      stream: vi.fn().mockResolvedValue(
+        createStream(
+          {
+            run_intake: {
+              planningStage: "intake",
+              response: "Need more info.",
+              plannerAction: null,
+              plan: null,
+              refusal: null,
             },
-            tasks: [
-              { title: "Run three times this week" },
-              { title: "Add one long run on Saturday" },
-            ],
           },
-        }),
+          {
+            run_preparation: {
+              planningStage: "preparation",
+              response: "Still working.",
+            },
+          },
+          {
+            run_generation: {
+              response: "Created a plan with 3 tasks.",
+              plannerAction: "create_plan",
+              plan: {
+                goal: { title: "Run 10k" },
+                tasks: [{ title: "Run 3 times a week" }],
+              },
+            },
+          },
+        ),
       ),
     });
-    const mockedConsoleLogSpy = vi
-      .spyOn(console, "log")
-      .mockImplementation(() => {});
 
     const engine = new AiEngine({
       routerWorkflow: mockedRouterWorkflow,
       plannerWorkflow: mockedPlannerWorkflow,
     });
 
-    const result = await engine.invokeRouter({
-      input: "Plan my 10k training",
-      threadId: "user-1",
+    const events = [];
+
+    for await (const event of engine.streamRouter({
+      jobId: "job-1",
+      jobType: "message",
+      input: "plan my goal",
+      threadId: "thread-1",
       userId: "user-1",
       timezone: "Europe/Warsaw",
-    });
+    })) {
+      events.push(event);
+    }
 
-    expect(result).toEqual({
-      routedIntent: "plan_goal",
-      response: "Created a plan with 2 tasks.",
-      plannerAction: "create_plan",
-      plan: {
-        goal: {
-          title: "Run a 10k",
-        },
-        tasks: [
-          { title: "Run three times this week" },
-          { title: "Add one long run on Saturday" },
-        ],
+    expect(events).toContainEqual({
+      type: "planner_stage",
+      jobId: "job-1",
+      jobType: "message",
+      threadId: "thread-1",
+      stage: "intake",
+      payload: {
+        planningStage: "intake",
+        response: "Need more info.",
+        plannerAction: null,
+        plan: null,
+        refusal: null,
       },
     });
-    expect(mockedPlannerWorkflow.invoke).toHaveBeenCalledWith(
-      expect.objectContaining({
-        threadId: "user-1",
-        userId: "user-1",
-        input: "Plan my 10k training",
-        timezone: "Europe/Warsaw",
-        routedIntent: "plan_goal",
-      }),
-      {
-        configurable: {
-          checkpoint_ns: "user-1",
-          thread_id: "user-1",
+    expect(events).toContainEqual({
+      type: "planner_stage",
+      jobId: "job-1",
+      jobType: "message",
+      threadId: "thread-1",
+      stage: "preparation",
+      payload: {
+        planningStage: "preparation",
+        response: "Still working.",
+      },
+    });
+    expect(events).toContainEqual({
+      type: "planner_stage",
+      jobId: "job-1",
+      jobType: "message",
+      threadId: "thread-1",
+      stage: "generation",
+      payload: {
+        response: "Created a plan with 3 tasks.",
+        plannerAction: "create_plan",
+        plan: {
+          goal: { title: "Run 10k" },
+          tasks: [{ title: "Run 3 times a week" }],
         },
       },
-    );
-    expect(mockedConsoleLogSpy).toHaveBeenCalledWith(
-      "AI engine plan_goal success",
-      expect.objectContaining({
-        threadId: "user-1",
-        userId: "user-1",
-      }),
-    );
+    });
+    expect(events.at(-2)).toEqual({
+      type: "planner_completed",
+      jobId: "job-1",
+      jobType: "message",
+      threadId: "thread-1",
+      plannerAction: "create_plan",
+    });
+    expect(events.at(-1)).toEqual({
+      type: "result",
+      jobId: "job-1",
+      jobType: "message",
+      threadId: "thread-1",
+      response: {
+        threadId: "thread-1",
+        routedIntent: "plan_goal",
+        response: "Created a plan with 3 tasks.",
+        plannerAction: "create_plan",
+        plan: {
+          goal: { title: "Run 10k" },
+          tasks: [{ title: "Run 3 times a week" }],
+        },
+      },
+    });
   });
 
-  it("invokes planner directly without routing", async () => {
-    const mockedRouterWorkflow: RouterWorkflow = {
-      invoke: vi.fn(),
-    } as never;
+  it("streams planner waiting results", async () => {
     const mockedPlannerWorkflow = createPlannerWorkflowDouble({
-      invoke: vi.fn().mockResolvedValue(
-        createPlannerState({
-          response: "Created a plan with 2 tasks.",
-          plannerAction: "create_plan",
-          plan: {
-            goal: {
-              title: "Run a 10k",
-            },
-            tasks: [
-              { title: "Run three times this week" },
-              { title: "Add one long run on Saturday" },
-            ],
+      stream: vi.fn().mockResolvedValue(
+        createStream({
+          run_intake: {
+            planningStage: "intake",
+            response: "Need more info.",
+            plannerAction: null,
+            plan: null,
+            refusal: null,
           },
         }),
       ),
     });
 
     const engine = new AiEngine({
-      routerWorkflow: mockedRouterWorkflow,
       plannerWorkflow: mockedPlannerWorkflow,
+      routerWorkflow: {
+        invoke: vi.fn(),
+        stream: vi.fn().mockResolvedValue(createStream()),
+      } as never,
     });
 
-    const result = await engine.invokePlanner({
+    const events = [];
+
+    for await (const event of engine.streamPlanner({
+      jobId: "job-2",
+      jobType: "plan_goal",
       input: "three days a week",
       threadId: "thread-1",
       userId: "user-1",
       timezone: "Europe/Warsaw",
-    });
+    })) {
+      events.push(event);
+    }
 
-    expect(result).toEqual({
-      routedIntent: "plan_goal",
-      response: "Created a plan with 2 tasks.",
-      plannerAction: "create_plan",
-      plan: {
-        goal: {
-          title: "Run a 10k",
-        },
-        tasks: [
-          { title: "Run three times this week" },
-          { title: "Add one long run on Saturday" },
-        ],
-      },
+    expect(events.at(-2)).toEqual({
+      type: "planner_waiting",
+      jobId: "job-2",
+      jobType: "plan_goal",
+      threadId: "thread-1",
     });
-    expect(mockedRouterWorkflow.invoke).not.toHaveBeenCalled();
-    expect(mockedPlannerWorkflow.invoke).toHaveBeenCalledWith(
-      expect.objectContaining({
+    expect(events.at(-1)).toEqual({
+      type: "result",
+      jobId: "job-2",
+      jobType: "plan_goal",
+      threadId: "thread-1",
+      response: {
         threadId: "thread-1",
-        userId: "user-1",
-        input: "three days a week",
-        timezone: "Europe/Warsaw",
         routedIntent: "plan_goal",
+        response: "Need more info.",
+      },
+    });
+  });
+
+  it("streams missing-checkpoint refusals through planner stream", async () => {
+    const mockedPlannerWorkflow = createPlannerWorkflowDouble({
+      getState: vi.fn().mockResolvedValue({
+        values: {},
       }),
+      stream: vi.fn().mockResolvedValue(createStream()),
+    });
+
+    const engine = new AiEngine({
+      plannerWorkflow: mockedPlannerWorkflow,
+      routerWorkflow: {
+        invoke: vi.fn(),
+        stream: vi.fn().mockResolvedValue(createStream()),
+      } as never,
+    });
+
+    const events = [];
+
+    for await (const event of engine.streamPlanner({
+      jobId: "job-2",
+      jobType: "plan_goal",
+      input: "three days a week",
+      requireCheckpoint: true,
+      threadId: "thread-1",
+      userId: "user-1",
+      timezone: "Europe/Warsaw",
+    })) {
+      events.push(event);
+    }
+
+    expect(events).toEqual([
       {
-        configurable: {
-          checkpoint_ns: "user-1",
-          thread_id: "thread-1",
+        type: "planner_started",
+        jobId: "job-2",
+        jobType: "plan_goal",
+        threadId: "thread-1",
+      },
+      {
+        type: "planner_completed",
+        jobId: "job-2",
+        jobType: "plan_goal",
+        threadId: "thread-1",
+        plannerAction: "refuse_plan",
+      },
+      {
+        type: "result",
+        jobId: "job-2",
+        jobType: "plan_goal",
+        threadId: "thread-1",
+        response: {
+          threadId: "thread-1",
+          routedIntent: "plan_goal",
+          plannerAction: "refuse_plan",
+          response: "No saved planning session exists for this thread.",
+          refusal: {
+            reason: "No saved planning session exists for this thread.",
+            proposals: [
+              "Start a new planning request from /message.",
+              "Continue with a thread that already has planner state.",
+            ],
+          },
         },
       },
-    );
-  });
-
-  it("logs refusal output on refused plan_goal results", async () => {
-    const mockedRouterWorkflow: RouterWorkflow = {
-      invoke: vi.fn().mockResolvedValue(
-        createRouterState({
-          intent: "plan_goal",
-        }),
-      ),
-    };
-    const mockedPlannerWorkflow = createPlannerWorkflowDouble({
-      invoke: vi.fn().mockResolvedValue(
-        createPlannerState({
-          response: "The plan is not feasible.",
-          plannerAction: "refuse_plan",
-          refusal: {
-            reason: "The timeline is too aggressive for the current baseline.",
-            proposals: ["Extend the due date.", "Reduce the target distance."],
-          },
-        }),
-      ),
-    });
-    const mockedConsoleLogSpy = vi
-      .spyOn(console, "log")
-      .mockImplementation(() => {});
-
-    const engine = new AiEngine({
-      routerWorkflow: mockedRouterWorkflow,
-      plannerWorkflow: mockedPlannerWorkflow,
-    });
-
-    const result = await engine.invokeRouter({
-      input: "Do something vague",
-      threadId: "user-1",
-      userId: "user-1",
-      timezone: "Europe/Warsaw",
-    });
-
-    expect(result).toEqual({
-      routedIntent: "plan_goal",
-      response: "The plan is not feasible.",
-      plannerAction: "refuse_plan",
-      refusal: {
-        reason: "The timeline is too aggressive for the current baseline.",
-        proposals: ["Extend the due date.", "Reduce the target distance."],
-      },
-    });
-    expect(mockedConsoleLogSpy).toHaveBeenCalledWith(
-      "AI engine plan_goal refusal",
-      expect.objectContaining({
-        threadId: "user-1",
-        userId: "user-1",
-      }),
-    );
-  });
-
-  it("shares one in-flight router initialization", async () => {
-    const mockedRouterWorkflow: RouterWorkflow = {
-      invoke: vi.fn().mockResolvedValue(
-        createRouterState({
-          intent: "show_tasks",
-        }),
-      ),
-    };
-    const mockedRouterDeferred = createDeferred<RouterWorkflow>();
-    const mockedGetOrInitRouterWorkflow = createCachedFactory(
-      mockedRouterDeferred.promise,
-    );
-
-    const mockedGetOrInitPlannerWorkflow = vi.fn();
-
-    const engine = new AiEngine({
-      factories: {
-        getOrInitRouterWorkflow: mockedGetOrInitRouterWorkflow,
-        getOrInitPlannerWorkflow: mockedGetOrInitPlannerWorkflow,
-      },
-    });
-
-    const first = engine.invokeRouter({
-      input: "show tasks",
-      threadId: "thread-1",
-      userId: "user-1",
-      timezone: "Europe/Warsaw",
-    });
-    const second = engine.invokeRouter({
-      input: "show tasks",
-      threadId: "thread-1",
-      userId: "user-1",
-      timezone: "Europe/Warsaw",
-    });
-
-    expect(mockedGetOrInitRouterWorkflow).toHaveBeenCalledTimes(2);
-    expect(mockedGetOrInitPlannerWorkflow).not.toHaveBeenCalled();
-
-    mockedRouterDeferred.resolve(mockedRouterWorkflow);
-
-    await expect(first).resolves.toEqual({
-      routedIntent: "show_tasks",
-      response: "show_tasks",
-    });
-    await expect(second).resolves.toEqual({
-      routedIntent: "show_tasks",
-      response: "show_tasks",
-    });
-  });
-
-  it("does not fail router requests when planner initialization would fail", async () => {
-    const mockedRouterWorkflow: RouterWorkflow = {
-      invoke: vi.fn().mockResolvedValue(
-        createRouterState({
-          intent: "show_tasks",
-        }),
-      ),
-    };
-
-    const engine = new AiEngine({
-      factories: {
-        getOrInitRouterWorkflow: vi
-          .fn()
-          .mockResolvedValue(mockedRouterWorkflow),
-        getOrInitPlannerWorkflow: vi
-          .fn()
-          .mockRejectedValue(new Error("postgres offline")),
-      },
-    });
-
-    await expect(
-      engine.invokeRouter({
-        input: "show tasks",
-        threadId: "thread-1",
-        userId: "user-1",
-        timezone: "Europe/Warsaw",
-      }),
-    ).resolves.toEqual({
-      routedIntent: "show_tasks",
-      response: "show_tasks",
-    });
+    ]);
+    expect(mockedPlannerWorkflow.stream).not.toHaveBeenCalled();
   });
 
   it("wraps router initialization failures", async () => {
@@ -421,12 +370,16 @@ describe("AiEngine", () => {
     });
 
     await expect(
-      engine.invokeRouter({
-        input: "show tasks",
-        threadId: "thread-1",
-        userId: "user-1",
-        timezone: "Europe/Warsaw",
-      }),
+      Array.fromAsync(
+        engine.streamRouter({
+          jobId: "job-1",
+          jobType: "message",
+          input: "show tasks",
+          threadId: "thread-1",
+          userId: "user-1",
+          timezone: "Europe/Warsaw",
+        }),
+      ),
     ).rejects.toBeInstanceOf(AiEngineUnavailableError);
     expect(mockedConsoleErrorSpy).toHaveBeenCalledWith(
       "AI engine router initialization failed",
@@ -436,138 +389,5 @@ describe("AiEngine", () => {
         userId: "user-1",
       }),
     );
-  });
-
-  it("retries initialization after a failure", async () => {
-    const mockedRouterWorkflow: RouterWorkflow = {
-      invoke: vi.fn().mockResolvedValue(
-        createRouterState({
-          intent: "show_tasks",
-        }),
-      ),
-    };
-    const error = new Error("redis offline");
-    const mockedGetOrInitRouterWorkflow = vi
-      .fn()
-      .mockRejectedValueOnce(error)
-      .mockResolvedValue(mockedRouterWorkflow);
-
-    const engine = new AiEngine({
-      factories: {
-        getOrInitRouterWorkflow: mockedGetOrInitRouterWorkflow,
-        getOrInitPlannerWorkflow: vi.fn(),
-      },
-    });
-
-    await expect(
-      engine.invokeRouter({
-        input: "show tasks",
-        threadId: "thread-1",
-        userId: "user-1",
-        timezone: "Europe/Warsaw",
-      }),
-    ).rejects.toBeInstanceOf(AiEngineUnavailableError);
-
-    await expect(
-      engine.invokeRouter({
-        input: "show tasks",
-        threadId: "thread-1",
-        userId: "user-1",
-        timezone: "Europe/Warsaw",
-      }),
-    ).resolves.toEqual({
-      routedIntent: "show_tasks",
-      response: "show_tasks",
-    });
-
-    expect(mockedGetOrInitRouterWorkflow).toHaveBeenCalledTimes(2);
-  });
-
-  it("shares one in-flight planner initialization", async () => {
-    const mockedPlannerWorkflow = createPlannerWorkflowDouble({
-      invoke: vi.fn().mockResolvedValue(
-        createPlannerState({
-          response: "Created a plan with 2 tasks.",
-          plannerAction: "create_plan",
-        }),
-      ),
-    });
-    const mockedPlannerDeferred = createDeferred<PlannerWorkflow>();
-    const mockedGetOrInitPlannerWorkflow = createCachedFactory(
-      mockedPlannerDeferred.promise,
-    );
-
-    const engine = new AiEngine({
-      factories: {
-        getOrInitPlannerWorkflow: mockedGetOrInitPlannerWorkflow,
-        getOrInitRouterWorkflow: vi.fn(),
-      },
-    });
-
-    const first = engine.invokePlanner({
-      input: "three days a week",
-      requireCheckpoint: true,
-      threadId: "thread-1",
-      userId: "user-1",
-      timezone: "Europe/Warsaw",
-    });
-    const second = engine.invokePlanner({
-      input: "three days a week",
-      requireCheckpoint: true,
-      threadId: "thread-1",
-      userId: "user-1",
-      timezone: "Europe/Warsaw",
-    });
-
-    expect(mockedGetOrInitPlannerWorkflow).toHaveBeenCalledTimes(2);
-
-    mockedPlannerDeferred.resolve(mockedPlannerWorkflow);
-
-    await expect(first).resolves.toMatchObject({
-      routedIntent: "plan_goal",
-      plannerAction: "create_plan",
-    });
-    await expect(second).resolves.toMatchObject({
-      routedIntent: "plan_goal",
-      plannerAction: "create_plan",
-    });
-  });
-
-  it("returns a refusal when continuing without a checkpoint", async () => {
-    const mockedPlannerWorkflow = createPlannerWorkflowDouble({
-      getState: vi.fn().mockResolvedValue({
-        values: {},
-      }),
-      invoke: vi.fn(),
-    });
-
-    const engine = new AiEngine({
-      plannerWorkflow: mockedPlannerWorkflow,
-      routerWorkflow: {
-        invoke: vi.fn(),
-      } as never,
-    });
-
-    await expect(
-      engine.invokePlanner({
-        input: "three days a week",
-        requireCheckpoint: true,
-        threadId: "thread-1",
-        userId: "user-1",
-        timezone: "Europe/Warsaw",
-      }),
-    ).resolves.toEqual({
-      routedIntent: "plan_goal",
-      plannerAction: "refuse_plan",
-      response: "No saved planning session exists for this thread.",
-      refusal: {
-        reason: "No saved planning session exists for this thread.",
-        proposals: [
-          "Start a new planning request from /message.",
-          "Continue with a thread that already has planner state.",
-        ],
-      },
-    });
-    expect(mockedPlannerWorkflow.invoke).not.toHaveBeenCalled();
   });
 });

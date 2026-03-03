@@ -15,11 +15,18 @@ type RouterState = PlanningSharedState & {
 
 export type RouterWorkflowInput = RouterState;
 export type RouterWorkflowState = RouterState;
+type RouterWorkflowConfig = RunnableConfig & {
+  streamMode?: "updates";
+};
 export type RouterWorkflow = {
   invoke: (
     state: RouterWorkflowState,
     config?: RunnableConfig,
   ) => Promise<RouterWorkflowState>;
+  stream: (
+    state: RouterWorkflowState,
+    config?: RouterWorkflowConfig,
+  ) => Promise<AsyncIterable<unknown>>;
 };
 
 type CreateRouterWorkflowDeps = {

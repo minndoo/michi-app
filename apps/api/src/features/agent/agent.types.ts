@@ -53,17 +53,119 @@ export interface AgentMessageResponse {
   refusal?: AgentRefusal;
 }
 
-export interface AgentEngineInput extends AgentMessageInput {
-  userId: string;
+export const agentJobTypeValues = ["message", "plan_goal"] as const;
+
+export type AgentJobType = (typeof agentJobTypeValues)[number];
+
+export const agentJobStatusValues = [
+  "queued",
+  "active",
+  "completed",
+  "failed",
+] as const;
+
+export type AgentJobStatus = (typeof agentJobStatusValues)[number];
+
+export interface AgentEnqueueResponse {
+  threadId: string;
+  jobId: string;
 }
 
-export interface AgentEngineResult {
-  routedIntent: RoutedIntent;
-  response: string;
-  plannerAction?: PlannerAction;
-  plan?: AgentPlannedGoalWithTasks;
-  refusal?: AgentRefusal;
+export interface AgentJobStateResponse {
+  jobId: string;
+  threadId: string;
+  status: AgentJobStatus;
+  result?: AgentMessageResponse;
+  error?: string;
 }
+
+export interface AgentStreamRunStartedEvent {
+  type: "run_started";
+  jobId: string;
+  jobType: AgentJobType;
+  threadId: string;
+}
+
+export interface AgentStreamRouterStartedEvent {
+  type: "router_started";
+  jobId: string;
+  jobType: AgentJobType;
+  threadId: string;
+}
+
+export interface AgentStreamRouterIntentResolvedEvent {
+  type: "router_intent_resolved";
+  jobId: string;
+  jobType: AgentJobType;
+  threadId: string;
+  routedIntent: RoutedIntent;
+}
+
+export interface AgentStreamPlannerStartedEvent {
+  type: "planner_started";
+  jobId: string;
+  jobType: AgentJobType;
+  threadId: string;
+}
+
+export interface AgentStreamPlannerStageEvent {
+  type: "planner_stage";
+  jobId: string;
+  jobType: AgentJobType;
+  threadId: string;
+  stage: PlanningStage;
+  payload: Record<string, unknown>;
+}
+
+export interface AgentStreamPlannerWaitingEvent {
+  type: "planner_waiting";
+  jobId: string;
+  jobType: AgentJobType;
+  threadId: string;
+}
+
+export interface AgentStreamPlannerCompletedEvent {
+  type: "planner_completed";
+  jobId: string;
+  jobType: AgentJobType;
+  threadId: string;
+  plannerAction?: PlannerAction;
+}
+
+export interface AgentStreamResultEvent {
+  type: "result";
+  jobId: string;
+  jobType: AgentJobType;
+  threadId: string;
+  response: AgentMessageResponse;
+}
+
+export interface AgentStreamErrorEvent {
+  type: "error";
+  jobId: string;
+  jobType: AgentJobType;
+  threadId: string;
+  message: string;
+}
+
+export interface AgentStreamDoneEvent {
+  type: "done";
+  jobId: string;
+  jobType: AgentJobType;
+  threadId: string;
+}
+
+export type AgentStreamEvent =
+  | AgentStreamRunStartedEvent
+  | AgentStreamRouterStartedEvent
+  | AgentStreamRouterIntentResolvedEvent
+  | AgentStreamPlannerStartedEvent
+  | AgentStreamPlannerStageEvent
+  | AgentStreamPlannerWaitingEvent
+  | AgentStreamPlannerCompletedEvent
+  | AgentStreamResultEvent
+  | AgentStreamErrorEvent
+  | AgentStreamDoneEvent;
 
 export interface PlanningSharedState {
   threadId: string;

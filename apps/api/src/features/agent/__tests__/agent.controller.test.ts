@@ -3,35 +3,37 @@
 
 import { describe, expect, it, vi } from "vitest";
 import type { Request as ExpressRequest } from "express";
-import { AiEngineUnavailableError } from "../ai-engine/ai-engine.js";
+import {
+  AgentInfrastructureError,
+  AgentJobNotFoundError,
+} from "../agent.errors.js";
 
-const { runMessage: mockedRunMessage } = vi.hoisted(() => ({
-  runMessage: vi.fn(),
+const { enqueue: mockedEnqueue } = vi.hoisted(() => ({
+  enqueue: vi.fn(),
 }));
-const { continuePlan: mockedContinuePlan } = vi.hoisted(() => ({
-  continuePlan: vi.fn(),
-}));
+const { getAgentJobStateForUser: mockedGetAgentJobStateForUser } = vi.hoisted(
+  () => ({
+    getAgentJobStateForUser: vi.fn(),
+  }),
+);
 
-vi.mock("../agent.service.js", () => ({
-  agentService: {
-    continuePlan: mockedContinuePlan,
-    runMessage: mockedRunMessage,
+vi.mock("../agent.queue.js", () => ({
+  agentQueueService: {
+    enqueue: mockedEnqueue,
   },
+}));
+
+vi.mock("../agent.events.js", () => ({
+  getAgentJobStateForUser: mockedGetAgentJobStateForUser,
 }));
 
 import { AgentController } from "../agent.controller.js";
 
 describe("AgentController", () => {
-  it("delegates message requests to the service", async () => {
-    mockedRunMessage.mockResolvedValueOnce({
+  it("enqueues message requests", async () => {
+    mockedEnqueue.mockResolvedValueOnce({
       threadId: "thread-1",
-      routedIntent: "plan_goal",
-      plannerAction: "create_plan",
-      response: "Created a plan with 2 tasks.",
-      plan: {
-        goal: { title: "Run a 10k" },
-        tasks: [{ title: "Run this week" }, { title: "Long run Saturday" }],
-      },
+      jobId: "job-1",
     });
 
     const controller = new AgentController();
@@ -51,23 +53,12 @@ describe("AgentController", () => {
       ),
     ).resolves.toEqual({
       threadId: "thread-1",
-      routedIntent: "plan_goal",
-      plannerAction: "create_plan",
-      response: "Created a plan with 2 tasks.",
-      plan: {
-        goal: { title: "Run a 10k" },
-        tasks: [{ title: "Run this week" }, { title: "Long run Saturday" }],
-      },
+      jobId: "job-1",
     });
   });
 
-  it("maps AI engine initialization failures to 503", async () => {
-    mockedRunMessage.mockRejectedValueOnce(
-      new AiEngineUnavailableError(
-        "Agent service temporarily unavailable",
-        new Error("redis offline"),
-      ),
-    );
+  it("maps enqueue failures to 503", async () => {
+    mockedEnqueue.mockRejectedValueOnce(new AgentInfrastructureError());
 
     const controller = new AgentController();
 
@@ -90,22 +81,16 @@ describe("AgentController", () => {
     });
   });
 
-  it("delegates continue-plan requests to the service", async () => {
-    mockedContinuePlan.mockResolvedValueOnce({
+  it("enqueues plan-goal requests", async () => {
+    mockedEnqueue.mockResolvedValueOnce({
       threadId: "thread-1",
-      routedIntent: "plan_goal",
-      plannerAction: "create_plan",
-      response: "Created a plan with 2 tasks.",
-      plan: {
-        goal: { title: "Run a 10k" },
-        tasks: [{ title: "Run this week" }, { title: "Long run Saturday" }],
-      },
+      jobId: "job-2",
     });
 
     const controller = new AgentController();
 
     await expect(
-      controller.postAgentContinuePlan(
+      controller.postAgentPlanGoal(
         {
           user: {
             id: "user-1",
@@ -119,42 +104,54 @@ describe("AgentController", () => {
       ),
     ).resolves.toEqual({
       threadId: "thread-1",
-      routedIntent: "plan_goal",
-      plannerAction: "create_plan",
-      response: "Created a plan with 2 tasks.",
-      plan: {
-        goal: { title: "Run a 10k" },
-        tasks: [{ title: "Run this week" }, { title: "Long run Saturday" }],
-      },
+      jobId: "job-2",
     });
   });
 
-  it("maps continue-plan AI engine initialization failures to 503", async () => {
-    mockedContinuePlan.mockRejectedValueOnce(
-      new AiEngineUnavailableError(
-        "Agent service temporarily unavailable",
-        new Error("redis offline"),
-      ),
-    );
+  it("returns message job status", async () => {
+    mockedGetAgentJobStateForUser.mockResolvedValueOnce({
+      jobId: "job-1",
+      threadId: "thread-1",
+      status: "queued",
+    });
 
     const controller = new AgentController();
 
     await expect(
-      controller.postAgentContinuePlan(
+      controller.getAgentMessageJob(
         {
           user: {
             id: "user-1",
           },
         } as ExpressRequest,
+        "job-1",
+      ),
+    ).resolves.toEqual({
+      jobId: "job-1",
+      threadId: "thread-1",
+      status: "queued",
+    });
+  });
+
+  it("maps missing job status to 404", async () => {
+    mockedGetAgentJobStateForUser.mockRejectedValueOnce(
+      new AgentJobNotFoundError(),
+    );
+
+    const controller = new AgentController();
+
+    await expect(
+      controller.getAgentPlanGoalJob(
         {
-          threadId: "thread-1",
-          message: "three days a week",
-          timezone: "Europe/Warsaw",
-        },
+          user: {
+            id: "user-1",
+          },
+        } as ExpressRequest,
+        "job-2",
       ),
     ).rejects.toMatchObject({
-      message: "Agent service temporarily unavailable",
-      status: 503,
+      message: "Agent job was not found",
+      status: 404,
     });
   });
 });

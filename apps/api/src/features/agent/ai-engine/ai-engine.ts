@@ -1,4 +1,10 @@
-import type { AgentEngineResult, PlanningSharedState } from "../agent.types.js";
+import type {
+  AgentJobType,
+  AgentMessageResponse,
+  AgentStreamEvent,
+  PlanningSharedState,
+  RoutedIntent,
+} from "../agent.types.js";
 import type {
   PlannerWorkflow,
   PlannerWorkflowInput,
@@ -12,6 +18,8 @@ import type {
 import { getOrInitRouterWorkflow } from "./workflows/router-workflow/router-workflow.js";
 
 type InvokeArgs = {
+  jobId: string;
+  jobType: AgentJobType;
   input: string;
   threadId: string;
   userId: string;
@@ -87,7 +95,10 @@ const createPlannerState = (args: InvokeArgs): PlannerWorkflowInput => ({
   routedIntent: "plan_goal",
 });
 
-const createMissingCheckpointResult = (): AgentEngineResult => ({
+const createMissingCheckpointResponse = (
+  threadId: string,
+): AgentMessageResponse => ({
+  threadId,
   routedIntent: "plan_goal",
   plannerAction: "refuse_plan",
   response: "No saved planning session exists for this thread.",
@@ -99,6 +110,167 @@ const createMissingCheckpointResult = (): AgentEngineResult => ({
     ],
   },
 });
+
+const getPlannerCheckpointThreadId = (args: InvokeArgs): string =>
+  `${args.userId}:${args.threadId}`;
+
+const getRouterCheckpointThreadId = (args: InvokeArgs): string =>
+  `${args.userId}:router:${args.threadId}`;
+
+const getRouterCheckpointConfig = (args: InvokeArgs) => ({
+  configurable: {
+    thread_id: getRouterCheckpointThreadId(args),
+  },
+});
+
+const getPlannerCheckpointConfig = (args: InvokeArgs) => ({
+  configurable: {
+    thread_id: getPlannerCheckpointThreadId(args),
+  },
+});
+
+const toRouterMessageResponse = ({
+  threadId,
+  routedIntent,
+}: {
+  threadId: string;
+  routedIntent: Exclude<RoutedIntent, "plan_goal">;
+}): AgentMessageResponse => ({
+  threadId,
+  routedIntent,
+  response: routedIntent,
+});
+
+const toPlannerMessageResponse = ({
+  threadId,
+  plannerState,
+}: {
+  threadId: string;
+  plannerState: PlannerWorkflowState;
+}): AgentMessageResponse => ({
+  threadId,
+  routedIntent: "plan_goal",
+  response: plannerState.response || "plan_goal",
+  ...(plannerState.plannerAction
+    ? { plannerAction: plannerState.plannerAction }
+    : {}),
+  ...(plannerState.plan ? { plan: plannerState.plan } : {}),
+  ...(plannerState.refusal ? { refusal: plannerState.refusal } : {}),
+});
+
+const isWaitingPlannerResponse = (result: AgentMessageResponse): boolean =>
+  result.routedIntent === "plan_goal" &&
+  result.plannerAction == null &&
+  result.plan == null &&
+  result.refusal == null;
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+const toStreamUpdateRecord = (chunk: unknown): Record<string, unknown> => {
+  if (Array.isArray(chunk)) {
+    const lastItem = chunk.at(-1);
+    return isRecord(lastItem) ? lastItem : {};
+  }
+
+  return isRecord(chunk) ? chunk : {};
+};
+
+const getNodeUpdate = (
+  chunk: unknown,
+  nodeName: string,
+): Record<string, unknown> | null => {
+  const updates = toStreamUpdateRecord(chunk);
+  const nodeUpdate = updates[nodeName];
+  return isRecord(nodeUpdate) ? nodeUpdate : null;
+};
+
+const getRoutedIntentFromChunk = (chunk: unknown): RoutedIntent | null => {
+  const nodeUpdate = getNodeUpdate(chunk, "llmCallRouter");
+  const intent = nodeUpdate?.intent;
+
+  return typeof intent === "string" ? (intent as RoutedIntent) : null;
+};
+
+const plannerNodeNames = [
+  "run_intake",
+  "run_preparation",
+  "run_generation",
+  "return_waiting",
+  "return_plan",
+  "return_refusal",
+] as const;
+
+const createPlannerAccumulatedState = (
+  args: InvokeArgs,
+): PlannerWorkflowState => ({
+  ...createPlannerState(args),
+  planningStage: "intake",
+  response: "",
+  plannerAction: null,
+  plan: null,
+  refusal: null,
+  intakeAccepted: null,
+  preparationAccepted: null,
+});
+
+const mergePlannerStreamUpdate = (
+  current: PlannerWorkflowState,
+  chunk: unknown,
+): PlannerWorkflowState => {
+  let nextState = current;
+
+  for (const nodeName of plannerNodeNames) {
+    const nodeUpdate = getNodeUpdate(chunk, nodeName);
+
+    if (!nodeUpdate) {
+      continue;
+    }
+
+    nextState = {
+      ...nextState,
+      ...nodeUpdate,
+    };
+  }
+
+  return nextState;
+};
+
+const getPlannerStageFromChunk = (
+  chunk: unknown,
+): {
+  stage: "intake" | "preparation" | "generation";
+  payload: Record<string, unknown>;
+} | null => {
+  const intakeUpdate = getNodeUpdate(chunk, "run_intake");
+
+  if (intakeUpdate) {
+    return {
+      stage: "intake",
+      payload: intakeUpdate,
+    };
+  }
+
+  const preparationUpdate = getNodeUpdate(chunk, "run_preparation");
+
+  if (preparationUpdate) {
+    return {
+      stage: "preparation",
+      payload: preparationUpdate,
+    };
+  }
+
+  const generationUpdate = getNodeUpdate(chunk, "run_generation");
+
+  if (generationUpdate) {
+    return {
+      stage: "generation",
+      payload: generationUpdate,
+    };
+  }
+
+  return null;
+};
 
 export class AiEngine {
   private plannerWorkflow: PlannerWorkflow | null;
@@ -165,12 +337,9 @@ export class AiEngine {
 
   private async hasPlannerCheckpoint(args: InvokeArgs): Promise<boolean> {
     const plannerWorkflow = await this.getPlannerWorkflow(args);
-    const snapshot = await plannerWorkflow.getState({
-      configurable: {
-        checkpoint_ns: args.userId,
-        thread_id: args.threadId,
-      },
-    });
+    const snapshot = await plannerWorkflow.getState(
+      getPlannerCheckpointConfig(args),
+    );
 
     return snapshot.createdAt != null || snapshot.metadata != null;
   }
@@ -202,55 +371,153 @@ export class AiEngine {
     });
   }
 
-  async invokePlanner(args: InvokePlannerArgs): Promise<AgentEngineResult> {
-    const plannerWorkflow = await this.getPlannerWorkflow(args);
+  async *streamPlanner(
+    args: InvokePlannerArgs,
+  ): AsyncGenerator<AgentStreamEvent> {
+    yield {
+      type: "planner_started",
+      jobId: args.jobId,
+      jobType: args.jobType,
+      threadId: args.threadId,
+    };
 
     if (args.requireCheckpoint && !(await this.hasPlannerCheckpoint(args))) {
-      return createMissingCheckpointResult();
+      const response = createMissingCheckpointResponse(args.threadId);
+
+      yield {
+        type: "planner_completed",
+        jobId: args.jobId,
+        jobType: args.jobType,
+        threadId: args.threadId,
+        plannerAction: response.plannerAction,
+      };
+      yield {
+        type: "result",
+        jobId: args.jobId,
+        jobType: args.jobType,
+        threadId: args.threadId,
+        response,
+      };
+      return;
     }
 
-    const plannerState = await plannerWorkflow.invoke(
+    const plannerWorkflow = await this.getPlannerWorkflow(args);
+    const plannerStream = await plannerWorkflow.stream(
       createPlannerState(args),
       {
-        configurable: {
-          thread_id: args.threadId,
-          checkpoint_ns: args.userId,
-        },
+        ...getPlannerCheckpointConfig(args),
+        streamMode: "updates",
       },
     );
+    let plannerState = createPlannerAccumulatedState(args);
+
+    for await (const chunk of plannerStream) {
+      const plannerStage = getPlannerStageFromChunk(chunk);
+
+      if (plannerStage) {
+        yield {
+          type: "planner_stage",
+          jobId: args.jobId,
+          jobType: args.jobType,
+          threadId: args.threadId,
+          stage: plannerStage.stage,
+          payload: plannerStage.payload,
+        };
+      }
+
+      plannerState = mergePlannerStreamUpdate(plannerState, chunk);
+    }
+
+    if (
+      plannerState.response === "" &&
+      plannerState.plannerAction == null &&
+      plannerState.plan == null &&
+      plannerState.refusal == null
+    ) {
+      throw new Error("Planner stream completed without a usable final state");
+    }
 
     this.logPlannerOutcome(args, plannerState);
 
-    return {
-      routedIntent: "plan_goal",
-      response: plannerState.response || "plan_goal",
-      ...(plannerState.plannerAction
-        ? { plannerAction: plannerState.plannerAction }
-        : {}),
-      ...(plannerState.plan ? { plan: plannerState.plan } : {}),
-      ...(plannerState.refusal ? { refusal: plannerState.refusal } : {}),
-    };
-  }
-
-  async invokeRouter(args: InvokeArgs): Promise<AgentEngineResult> {
-    const routerWorkflow = await this.getRouterWorkflow(args);
-
-    const state = createRouterState(args);
-    const routerResult = await routerWorkflow.invoke(state, {
-      configurable: {
-        thread_id: state.threadId,
-        checkpoint_ns: args.userId,
-      },
+    const response = toPlannerMessageResponse({
+      threadId: args.threadId,
+      plannerState,
     });
-    const routedIntent = routerResult.intent ?? "refuse";
 
-    if (routedIntent !== "plan_goal") {
-      return {
-        routedIntent,
-        response: routedIntent,
+    if (isWaitingPlannerResponse(response)) {
+      yield {
+        type: "planner_waiting",
+        jobId: args.jobId,
+        jobType: args.jobType,
+        threadId: args.threadId,
+      };
+    } else {
+      yield {
+        type: "planner_completed",
+        jobId: args.jobId,
+        jobType: args.jobType,
+        threadId: args.threadId,
+        plannerAction: response.plannerAction,
       };
     }
 
-    return this.invokePlanner(args);
+    yield {
+      type: "result",
+      jobId: args.jobId,
+      threadId: args.threadId,
+      jobType: args.jobType,
+      response,
+    };
+  }
+
+  async *streamRouter(args: InvokeArgs): AsyncGenerator<AgentStreamEvent> {
+    yield {
+      type: "router_started",
+      jobId: args.jobId,
+      jobType: args.jobType,
+      threadId: args.threadId,
+    };
+
+    const routerWorkflow = await this.getRouterWorkflow(args);
+    const routerState = createRouterState(args);
+    const routerStream = await routerWorkflow.stream(routerState, {
+      ...getRouterCheckpointConfig(args),
+      streamMode: "updates",
+    });
+    let routedIntent: RoutedIntent | null = null;
+
+    for await (const chunk of routerStream) {
+      routedIntent = getRoutedIntentFromChunk(chunk) ?? routedIntent;
+    }
+
+    if (routedIntent == null) {
+      throw new Error("Router stream completed without a routed intent");
+    }
+
+    yield {
+      type: "router_intent_resolved",
+      jobId: args.jobId,
+      jobType: args.jobType,
+      threadId: args.threadId,
+      routedIntent,
+    };
+
+    if (routedIntent !== "plan_goal") {
+      yield {
+        type: "result",
+        jobId: args.jobId,
+        jobType: args.jobType,
+        threadId: args.threadId,
+        response: toRouterMessageResponse({
+          threadId: args.threadId,
+          routedIntent,
+        }),
+      };
+      return;
+    }
+
+    for await (const event of this.streamPlanner(args)) {
+      yield event;
+    }
   }
 }
