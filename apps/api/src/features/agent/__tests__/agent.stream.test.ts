@@ -25,20 +25,21 @@ const createResponse = () =>
 describe("agent stream", () => {
   it("subscribes to live domain events and closes when done arrives", async () => {
     const response = createResponse();
-    let listener: ((message: string) => void) | null = null;
+    let listener: ((event: Record<string, string>) => void) | null = null;
+    const unsubscribe = vi.fn().mockResolvedValue(undefined);
 
     const handler = createStreamHandler("message", {
-      createAgentEventSubscriber: vi.fn().mockResolvedValue({
-        subscribe: vi.fn(async (_channel, nextListener) => {
-          listener = nextListener;
-        }),
-        quit: vi.fn().mockResolvedValue(undefined),
-      }) as never,
       getAgentJobStateForUser: vi.fn().mockResolvedValue({
         jobId: "job-1",
         threadId: "thread-1",
         status: "active",
       }) as never,
+      subscribeToAgentEvents: vi
+        .fn()
+        .mockImplementation(async ({ listener: nextListener }) => {
+          listener = nextListener as never;
+          return unsubscribe;
+        }) as never,
     });
 
     await handler(
@@ -50,22 +51,18 @@ describe("agent stream", () => {
       response,
     );
 
-    listener?.(
-      JSON.stringify({
-        type: "router_started",
-        jobId: "job-1",
-        jobType: "message",
-        threadId: "thread-1",
-      }),
-    );
-    listener?.(
-      JSON.stringify({
-        type: "done",
-        jobId: "job-1",
-        jobType: "message",
-        threadId: "thread-1",
-      }),
-    );
+    listener?.({
+      type: "router_started",
+      jobId: "job-1",
+      jobType: "message",
+      threadId: "thread-1",
+    });
+    listener?.({
+      type: "done",
+      jobId: "job-1",
+      jobType: "message",
+      threadId: "thread-1",
+    });
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(response.status).toHaveBeenCalledWith(200);
@@ -78,15 +75,16 @@ describe("agent stream", () => {
       'data: {"type":"router_started","jobId":"job-1","jobType":"message","threadId":"thread-1"}\n\n',
     );
     expect(response.end).toHaveBeenCalled();
+    expect(unsubscribe).toHaveBeenCalled();
   });
 
   it("returns 404 when the job is missing", async () => {
     const response = createResponse();
     const handler = createStreamHandler("plan_goal", {
-      createAgentEventSubscriber: vi.fn() as never,
       getAgentJobStateForUser: vi
         .fn()
         .mockRejectedValue(new AgentJobNotFoundError()) as never,
+      subscribeToAgentEvents: vi.fn() as never,
     });
 
     await handler(
@@ -108,7 +106,7 @@ describe("agent stream", () => {
   it("writes terminal error events when stream setup fails after headers", async () => {
     const response = createResponse();
     const handler = createStreamHandler("message", {
-      createAgentEventSubscriber: vi
+      subscribeToAgentEvents: vi
         .fn()
         .mockRejectedValue(new AgentInfrastructureError()) as never,
       getAgentJobStateForUser: vi.fn().mockResolvedValue({

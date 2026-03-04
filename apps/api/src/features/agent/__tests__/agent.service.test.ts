@@ -78,6 +78,16 @@ describe("AgentService", () => {
         jobId: "job-2",
         jobType: "plan_goal",
         threadId: "thread-1",
+        stage: "intake",
+        question: {
+          stage: "intake",
+          question: {
+            field: "daysWeeklyFrequency",
+            question: "How many days per week can you work on this?",
+          },
+          placeholder: "Example: 3 days per week",
+          inputHint: "days_per_week",
+        },
       },
       {
         type: "result",
@@ -87,18 +97,28 @@ describe("AgentService", () => {
         response: {
           threadId: "thread-1",
           routedIntent: "plan_goal",
-          response: "Need more info.",
+          response: "How many days per week can you work on this?",
+          plannerQuestion: {
+            stage: "intake",
+            question: {
+              field: "daysWeeklyFrequency",
+              question: "How many days per week can you work on this?",
+            },
+            placeholder: "Example: 3 days per week",
+            inputHint: "days_per_week",
+          },
         },
       },
     ];
+    const streamPlanner = vi.fn(async function* () {
+      for (const event of events) {
+        yield event;
+      }
+    });
 
     const service = new AgentService({
       engine: {
-        streamPlanner: async function* () {
-          for (const event of events) {
-            yield event;
-          }
-        } as never,
+        streamPlanner: streamPlanner as never,
         streamRouter: vi.fn() as never,
       },
     });
@@ -108,11 +128,28 @@ describe("AgentService", () => {
     for await (const event of service.continuePlanStream("user-1", "job-2", {
       threadId: "thread-1",
       message: "three days a week",
+      questionAnswer: {
+        field: "daysWeeklyFrequency",
+        answer: "three days a week",
+      },
       timezone: "Europe/Warsaw",
     })) {
       received.push(event);
     }
 
     expect(received).toEqual(events);
+    expect(streamPlanner).toHaveBeenCalledWith({
+      jobId: "job-2",
+      jobType: "plan_goal",
+      input: "three days a week",
+      questionAnswer: {
+        field: "daysWeeklyFrequency",
+        answer: "three days a week",
+      },
+      requireCheckpoint: true,
+      threadId: "thread-1",
+      userId: "user-1",
+      timezone: "Europe/Warsaw",
+    });
   });
 });

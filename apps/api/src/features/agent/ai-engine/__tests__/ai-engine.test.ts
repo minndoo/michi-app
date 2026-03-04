@@ -18,6 +18,7 @@ const createPlannerState = (
   planningStage: "generation",
   response: "",
   plannerAction: null,
+  plannerQuestion: null,
   plan: null,
   refusal: null,
   intakeAccepted: null,
@@ -126,6 +127,15 @@ describe("AiEngine", () => {
             run_intake: {
               planningStage: "intake",
               response: "Need more info.",
+              plannerQuestion: {
+                stage: "intake",
+                question: {
+                  field: "daysWeeklyFrequency",
+                  question: "How many days per week can you work on this?",
+                },
+                placeholder: "Example: 3 days per week",
+                inputHint: "days_per_week",
+              },
               plannerAction: null,
               plan: null,
               refusal: null,
@@ -135,12 +145,14 @@ describe("AiEngine", () => {
             run_preparation: {
               planningStage: "preparation",
               response: "Still working.",
+              plannerQuestion: null,
             },
           },
           {
             run_generation: {
               response: "Created a plan with 3 tasks.",
               plannerAction: "create_plan",
+              plannerQuestion: null,
               plan: {
                 goal: { title: "Run 10k" },
                 tasks: [{ title: "Run 3 times a week" }],
@@ -178,6 +190,15 @@ describe("AiEngine", () => {
       payload: {
         planningStage: "intake",
         response: "Need more info.",
+        plannerQuestion: {
+          stage: "intake",
+          question: {
+            field: "daysWeeklyFrequency",
+            question: "How many days per week can you work on this?",
+          },
+          placeholder: "Example: 3 days per week",
+          inputHint: "days_per_week",
+        },
         plannerAction: null,
         plan: null,
         refusal: null,
@@ -192,6 +213,7 @@ describe("AiEngine", () => {
       payload: {
         planningStage: "preparation",
         response: "Still working.",
+        plannerQuestion: null,
       },
     });
     expect(events).toContainEqual({
@@ -203,6 +225,7 @@ describe("AiEngine", () => {
       payload: {
         response: "Created a plan with 3 tasks.",
         plannerAction: "create_plan",
+        plannerQuestion: null,
         plan: {
           goal: { title: "Run 10k" },
           tasks: [{ title: "Run 3 times a week" }],
@@ -240,6 +263,102 @@ describe("AiEngine", () => {
         createStream({
           run_intake: {
             planningStage: "intake",
+            response: "How many days per week can you work on this?",
+            plannerQuestion: {
+              stage: "intake",
+              question: {
+                field: "daysWeeklyFrequency",
+                question: "How many days per week can you work on this?",
+              },
+              placeholder: "Example: 3 days per week",
+              inputHint: "days_per_week",
+            },
+            plannerAction: null,
+            plan: null,
+            refusal: null,
+          },
+        }),
+      ),
+    });
+
+    const engine = new AiEngine({
+      plannerWorkflow: mockedPlannerWorkflow,
+      routerWorkflow: {
+        invoke: vi.fn(),
+        stream: vi.fn().mockResolvedValue(createStream()),
+      } as never,
+    });
+
+    const events = [];
+
+    for await (const event of engine.streamPlanner({
+      jobId: "job-2",
+      jobType: "plan_goal",
+      input: "three days a week",
+      questionAnswer: {
+        field: "daysWeeklyFrequency",
+        answer: "three days a week",
+      },
+      threadId: "thread-1",
+      userId: "user-1",
+      timezone: "Europe/Warsaw",
+    })) {
+      events.push(event);
+    }
+
+    expect(events.at(-2)).toEqual({
+      type: "planner_waiting",
+      jobId: "job-2",
+      jobType: "plan_goal",
+      threadId: "thread-1",
+      stage: "intake",
+      question: {
+        stage: "intake",
+        question: {
+          field: "daysWeeklyFrequency",
+          question: "How many days per week can you work on this?",
+        },
+        placeholder: "Example: 3 days per week",
+        inputHint: "days_per_week",
+      },
+    });
+    expect(events.at(-1)).toEqual({
+      type: "result",
+      jobId: "job-2",
+      jobType: "plan_goal",
+      threadId: "thread-1",
+      response: {
+        threadId: "thread-1",
+        routedIntent: "plan_goal",
+        response: "How many days per week can you work on this?",
+        plannerQuestion: {
+          stage: "intake",
+          question: {
+            field: "daysWeeklyFrequency",
+            question: "How many days per week can you work on this?",
+          },
+          placeholder: "Example: 3 days per week",
+          inputHint: "days_per_week",
+        },
+      },
+    });
+    expect(mockedPlannerWorkflow.stream).toHaveBeenCalledWith(
+      expect.objectContaining({
+        questionAnswer: {
+          field: "daysWeeklyFrequency",
+          answer: "three days a week",
+        },
+      }),
+      expect.any(Object),
+    );
+  });
+
+  it("treats legacy plan_goal waiting results as waiting without completion", async () => {
+    const mockedPlannerWorkflow = createPlannerWorkflowDouble({
+      stream: vi.fn().mockResolvedValue(
+        createStream({
+          run_intake: {
+            planningStage: "intake",
             response: "Need more info.",
             plannerAction: null,
             plan: null,
@@ -270,23 +389,39 @@ describe("AiEngine", () => {
       events.push(event);
     }
 
-    expect(events.at(-2)).toEqual({
-      type: "planner_waiting",
-      jobId: "job-2",
-      jobType: "plan_goal",
-      threadId: "thread-1",
-    });
-    expect(events.at(-1)).toEqual({
-      type: "result",
-      jobId: "job-2",
-      jobType: "plan_goal",
-      threadId: "thread-1",
-      response: {
+    expect(events).toEqual([
+      {
+        type: "planner_started",
+        jobId: "job-2",
+        jobType: "plan_goal",
         threadId: "thread-1",
-        routedIntent: "plan_goal",
-        response: "Need more info.",
       },
-    });
+      {
+        type: "planner_stage",
+        jobId: "job-2",
+        jobType: "plan_goal",
+        threadId: "thread-1",
+        stage: "intake",
+        payload: {
+          planningStage: "intake",
+          response: "Need more info.",
+          plannerAction: null,
+          plan: null,
+          refusal: null,
+        },
+      },
+      {
+        type: "result",
+        jobId: "job-2",
+        jobType: "plan_goal",
+        threadId: "thread-1",
+        response: {
+          threadId: "thread-1",
+          routedIntent: "plan_goal",
+          response: "Need more info.",
+        },
+      },
+    ]);
   });
 
   it("streams missing-checkpoint refusals through planner stream", async () => {

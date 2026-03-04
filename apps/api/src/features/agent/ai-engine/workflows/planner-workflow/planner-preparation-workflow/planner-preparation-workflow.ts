@@ -7,6 +7,7 @@ import type {
   PlanningSharedState,
 } from "../../../../agent.types.js";
 import { preparationAcceptedSchema } from "./schemas.js";
+import { createClarification } from "../planner-clarification.js";
 
 type PlannerPreparationState = PlanningSharedState & {
   input: string;
@@ -32,6 +33,10 @@ const PlannerPreparationStateAnnotation = Annotation.Root({
   userId: Annotation<string>(),
   referenceDate: Annotation<string>(),
   timezone: Annotation<string>(),
+  questionAnswer: Annotation<PlanningSharedState["questionAnswer"]>({
+    reducer: (_, update) => update ?? null,
+    default: () => null,
+  }),
   input: Annotation<string>(),
   intakeAccepted: Annotation<PlanIntakeAccepted>({
     reducer: (_, update) => update,
@@ -52,7 +57,12 @@ const addDays = (isoDate: string, days: number): string => {
   return date.toISOString();
 };
 
-const buildPrompt = (state: PlannerPreparationWorkflowState): string => `
+const buildPrompt = (state: PlannerPreparationWorkflowState): string => {
+  const clarification = state.questionAnswer
+    ? createClarification(state.questionAnswer)
+    : null;
+
+  return `
 Normalize and quantify the intake planning input.
 
 Reference date: ${state.referenceDate}
@@ -61,10 +71,18 @@ Timezone: ${state.timezone}
 Input:
 ${JSON.stringify(state.intakeAccepted, null, 2)}
 
-Return either:
+${
+  clarification
+    ? `Clarifications:
+${clarification}
+
+`
+    : ""
+}Return either:
 - accepted normalized planning input
-- waiting with clarifyingQuestions
+- waiting with one question object containing question.field, question.question, placeholder, and inputHint
 `;
+};
 
 const fallbackAccepted = (
   state: PlannerPreparationWorkflowState,
@@ -98,7 +116,12 @@ const llmCallPlannerPreparation = async (
       return {
         accepted: null,
         waiting: {
-          clarifyingQuestions: response.clarifyingQuestions,
+          question: {
+            stage: "preparation",
+            question: response.question,
+            placeholder: response.placeholder,
+            inputHint: response.inputHint,
+          },
         },
       };
     }

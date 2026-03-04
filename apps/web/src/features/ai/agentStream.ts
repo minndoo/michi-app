@@ -40,6 +40,8 @@ export type AgentStreamEvent =
       jobId: string;
       jobType: AgentStreamJobType;
       threadId: string;
+      stage: NonNullable<AgentMessageResponse["plannerQuestion"]>["stage"];
+      question: NonNullable<AgentMessageResponse["plannerQuestion"]>;
     }
   | {
       type: "planner_completed";
@@ -126,9 +128,10 @@ export const isWaitingPlannerResponse = (
 ): boolean =>
   result != null &&
   result.routedIntent === "plan_goal" &&
-  result.plannerAction == null &&
-  result.plan == null &&
-  result.refusal == null;
+  (result.plannerQuestion != null ||
+    (result.plannerAction == null &&
+      result.plan == null &&
+      result.refusal == null));
 
 export const enqueueAgentRun = async ({
   input,

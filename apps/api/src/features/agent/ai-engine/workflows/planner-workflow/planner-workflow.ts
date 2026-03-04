@@ -7,7 +7,9 @@ import type {
   AgentRefusal,
   PlannerAction,
   PlanIntakeAccepted,
+  PlanIntakeAcceptedDraft,
   PlanPreparationAccepted,
+  PlanPlannerQuestion,
   PlanningSharedState,
   PlanningStage,
   RoutedIntent,
@@ -39,8 +41,9 @@ type PlannerState = PlanningSharedState & {
   input: string;
   routedIntent: RoutedIntent;
   planningStage: PlanningStage;
-  intakeAccepted: PlanIntakeAccepted | null;
+  intakeAccepted: PlanIntakeAcceptedDraft | null;
   preparationAccepted: PlanPreparationAccepted | null;
+  plannerQuestion: PlanPlannerQuestion | null;
   response: string;
   plannerAction: PlannerAction | null;
   plan: AgentPlannedGoalWithTasks | null;
@@ -51,8 +54,9 @@ export type PlannerWorkflowInput = PlanningSharedState & {
   input: string;
   routedIntent: RoutedIntent;
   planningStage?: PlanningStage;
-  intakeAccepted?: PlanIntakeAccepted | null;
+  intakeAccepted?: PlanIntakeAcceptedDraft | null;
   preparationAccepted?: PlanPreparationAccepted | null;
+  plannerQuestion?: PlanPlannerQuestion | null;
   response?: string;
   plannerAction?: PlannerAction | null;
   plan?: AgentPlannedGoalWithTasks | null;
@@ -102,6 +106,10 @@ const PlannerStateAnnotation = Annotation.Root({
   userId: Annotation<string>(),
   referenceDate: Annotation<string>(),
   timezone: Annotation<string>(),
+  questionAnswer: Annotation<PlanningSharedState["questionAnswer"]>({
+    reducer: (_, update) => update ?? null,
+    default: () => null,
+  }),
   input: Annotation<string>(),
   routedIntent: Annotation<RoutedIntent>({
     reducer: (_, update) => update,
@@ -110,11 +118,15 @@ const PlannerStateAnnotation = Annotation.Root({
     reducer: (_, update) => update ?? "intake",
     default: () => "intake",
   }),
-  intakeAccepted: Annotation<PlanIntakeAccepted | null>({
+  intakeAccepted: Annotation<PlanIntakeAcceptedDraft | null>({
     reducer: (_, update) => update ?? null,
     default: () => null,
   }),
   preparationAccepted: Annotation<PlanPreparationAccepted | null>({
+    reducer: (_, update) => update ?? null,
+    default: () => null,
+  }),
+  plannerQuestion: Annotation<PlanPlannerQuestion | null>({
     reducer: (_, update) => update ?? null,
     default: () => null,
   }),
@@ -136,16 +148,47 @@ const PlannerStateAnnotation = Annotation.Root({
   }),
 });
 
-const buildIntakeResponse = (missingFields: string[]): string =>
-  `I can continue once you provide: ${missingFields.join(", ")}.`;
-
-const buildPreparationResponse = (clarifyingQuestions: string[]): string =>
-  clarifyingQuestions.join(" ");
-
 const buildPlanResponse = (plan: AgentPlannedGoalWithTasks): string =>
   `Created a plan with ${plan.tasks.length} tasks.`;
 
 const buildRefusalResponse = (refusal: AgentRefusal): string => refusal.reason;
+
+const hasNonEmptyString = (value: unknown): value is string =>
+  typeof value === "string" && value.trim().length > 0;
+
+const hasValidDaysWeeklyFrequency = (value: unknown): value is number =>
+  typeof value === "number" &&
+  Number.isInteger(value) &&
+  value >= 1 &&
+  value <= 7;
+
+const hasCompleteIntakeAccepted = (
+  intakeAccepted: PlanIntakeAcceptedDraft | null,
+): intakeAccepted is PlanIntakeAccepted =>
+  intakeAccepted != null &&
+  hasNonEmptyString(intakeAccepted.goal) &&
+  hasNonEmptyString(intakeAccepted.baseline) &&
+  (hasNonEmptyString(intakeAccepted.startDate) ||
+    hasNonEmptyString(intakeAccepted.relativeStartDate)) &&
+  (hasNonEmptyString(intakeAccepted.dueDate) ||
+    hasNonEmptyString(intakeAccepted.relativeDueDate)) &&
+  hasValidDaysWeeklyFrequency(intakeAccepted.daysWeeklyFrequency);
+
+const hasCompletePreparationAccepted = (
+  preparationAccepted: PlanPreparationAccepted | null,
+): preparationAccepted is PlanPreparationAccepted =>
+  preparationAccepted != null &&
+  hasNonEmptyString(preparationAccepted.goal) &&
+  hasNonEmptyString(preparationAccepted.baseline) &&
+  hasNonEmptyString(preparationAccepted.startDate) &&
+  hasNonEmptyString(preparationAccepted.dueDate) &&
+  hasValidDaysWeeklyFrequency(preparationAccepted.daysWeeklyFrequency) &&
+  typeof preparationAccepted.goalDerivedValue === "number" &&
+  Number.isFinite(preparationAccepted.goalDerivedValue) &&
+  typeof preparationAccepted.baselineDerivedValue === "number" &&
+  Number.isFinite(preparationAccepted.baselineDerivedValue) &&
+  typeof preparationAccepted.goalBaselineGap === "number" &&
+  Number.isFinite(preparationAccepted.goalBaselineGap);
 
 const runIntake = async (
   state: PlannerWorkflowState,
@@ -156,15 +199,18 @@ const runIntake = async (
     userId: state.userId,
     referenceDate: state.referenceDate,
     timezone: state.timezone,
+    questionAnswer: state.questionAnswer,
     input: state.input,
     accepted: state.intakeAccepted,
-    denied: null,
+    waiting: null,
   });
 
-  if (result.denied) {
+  if (result.waiting) {
     return {
+      intakeAccepted: result.accepted,
       planningStage: "intake",
-      response: buildIntakeResponse(result.denied.missingFields),
+      plannerQuestion: result.waiting.question,
+      response: result.waiting.question.question.question,
       plannerAction: null,
       plan: null,
       refusal: null,
@@ -174,6 +220,7 @@ const runIntake = async (
   return {
     intakeAccepted: result.accepted,
     planningStage: "preparation",
+    plannerQuestion: null,
   };
 };
 
@@ -181,13 +228,33 @@ const runPreparation = async (
   state: PlannerWorkflowState,
   preparationWorkflow: PlannerPreparationWorkflow,
 ): Promise<Partial<PlannerWorkflowState>> => {
+  if (!hasCompleteIntakeAccepted(state.intakeAccepted)) {
+    const refusal: AgentRefusal = {
+      reason: "The planning session is missing required intake details.",
+      proposals: [
+        "Start a new planning request from /message.",
+        "Continue with a thread that has complete intake details.",
+      ],
+    };
+
+    return {
+      planningStage: "preparation",
+      plannerAction: "refuse_plan",
+      plannerQuestion: null,
+      response: buildRefusalResponse(refusal),
+      plan: null,
+      refusal,
+    };
+  }
+
   const result = await preparationWorkflow.invoke({
     threadId: state.threadId,
     userId: state.userId,
     referenceDate: state.referenceDate,
     timezone: state.timezone,
+    questionAnswer: state.questionAnswer,
     input: state.input,
-    intakeAccepted: state.intakeAccepted!,
+    intakeAccepted: state.intakeAccepted,
     accepted: state.preparationAccepted,
     waiting: null,
   });
@@ -195,7 +262,8 @@ const runPreparation = async (
   if (result.waiting) {
     return {
       planningStage: "preparation",
-      response: buildPreparationResponse(result.waiting.clarifyingQuestions),
+      plannerQuestion: result.waiting.question,
+      response: result.waiting.question.question.question,
       plannerAction: null,
       plan: null,
       refusal: null,
@@ -205,6 +273,7 @@ const runPreparation = async (
   return {
     preparationAccepted: result.accepted,
     planningStage: "generation",
+    plannerQuestion: null,
   };
 };
 
@@ -212,13 +281,32 @@ const runGeneration = async (
   state: PlannerWorkflowState,
   generationWorkflow: PlannerGenerationWorkflow,
 ): Promise<Partial<PlannerWorkflowState>> => {
+  if (!hasCompletePreparationAccepted(state.preparationAccepted)) {
+    const refusal: AgentRefusal = {
+      reason: "The planning session is missing required preparation details.",
+      proposals: [
+        "Start a new planning request from /message.",
+        "Continue with a thread that has complete preparation details.",
+      ],
+    };
+
+    return {
+      planningStage: "generation",
+      plannerAction: "refuse_plan",
+      plannerQuestion: null,
+      response: buildRefusalResponse(refusal),
+      plan: null,
+      refusal,
+    };
+  }
+
   const result = await generationWorkflow.invoke({
     threadId: state.threadId,
     userId: state.userId,
     referenceDate: state.referenceDate,
     timezone: state.timezone,
     input: state.input,
-    preparationAccepted: state.preparationAccepted!,
+    preparationAccepted: state.preparationAccepted,
     plannerAction: state.plannerAction,
     plan: state.plan,
     refusal: state.refusal,
@@ -227,6 +315,7 @@ const runGeneration = async (
   if (result.plannerAction === "refuse_plan" && result.refusal) {
     return {
       plannerAction: "refuse_plan",
+      plannerQuestion: null,
       response: buildRefusalResponse(result.refusal),
       plan: null,
       refusal: result.refusal,
@@ -235,6 +324,7 @@ const runGeneration = async (
 
   return {
     plannerAction: "create_plan",
+    plannerQuestion: null,
     response: buildPlanResponse(result.plan!),
     plan: result.plan,
     refusal: null,
@@ -278,6 +368,10 @@ export const createPlannerWorkflow = ({
       return "run_preparation";
     })
     .addConditionalEdges("run_preparation", (state) => {
+      if (state.plannerAction === "refuse_plan") {
+        return "return_refusal";
+      }
+
       if (state.planningStage === "preparation") {
         return "return_waiting";
       }

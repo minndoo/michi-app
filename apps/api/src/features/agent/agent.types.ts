@@ -22,9 +22,25 @@ export interface AgentInput {
   timezone: string;
 }
 
+export const plannerFieldKeyValues = [
+  "goal",
+  "baseline",
+  "startDate",
+  "dueDate",
+  "daysWeeklyFrequency",
+] as const;
+
+export type PlannerFieldKey = (typeof plannerFieldKeyValues)[number];
+
+export interface PlannerQuestionClarification {
+  field: PlannerFieldKey;
+  answer: string;
+}
+
 export interface AgentMessageInput extends AgentInput {
   threadId: string;
   message: string;
+  questionAnswer?: PlannerQuestionClarification | null;
 }
 
 export interface AgentPlannedGoal {
@@ -49,6 +65,7 @@ export interface AgentMessageResponse {
   routedIntent: RoutedIntent;
   response: string;
   plannerAction?: PlannerAction;
+  plannerQuestion?: PlanPlannerQuestion;
   plan?: AgentPlannedGoalWithTasks;
   refusal?: AgentRefusal;
 }
@@ -122,6 +139,8 @@ export interface AgentStreamPlannerWaitingEvent {
   jobId: string;
   jobType: AgentJobType;
   threadId: string;
+  stage: PlannerQuestionStage;
+  question: PlanPlannerQuestion;
 }
 
 export interface AgentStreamPlannerCompletedEvent {
@@ -172,9 +191,37 @@ export interface PlanningSharedState {
   userId: string;
   referenceDate: string;
   timezone: string;
+  questionAnswer?: PlannerQuestionClarification | null;
 }
 
 export type PlanningStage = "intake" | "preparation" | "generation";
+
+export type PlannerQuestionStage = "intake" | "preparation";
+
+export const planIntakeFieldKeyValues = plannerFieldKeyValues;
+
+export type PlanIntakeFieldKey = PlannerFieldKey;
+
+export const planPlannerQuestionInputHintValues = [
+  "free_text",
+  "date_or_relative",
+  "days_per_week",
+] as const;
+
+export type PlanPlannerQuestionInputHint =
+  (typeof planPlannerQuestionInputHintValues)[number];
+
+export interface PlannerQuestion {
+  field: PlannerFieldKey;
+  question: string;
+}
+
+export interface PlanPlannerQuestion {
+  stage: PlannerQuestionStage;
+  question: PlannerQuestion;
+  placeholder: string;
+  inputHint: PlanPlannerQuestionInputHint;
+}
 
 export interface PlanIntakeAccepted {
   goal: string;
@@ -186,9 +233,12 @@ export interface PlanIntakeAccepted {
   daysWeeklyFrequency: number;
 }
 
-export interface PlanIntakeDenied {
+export type PlanIntakeAcceptedDraft = Partial<PlanIntakeAccepted>;
+
+export interface PlanIntakeWaiting {
   reason: string;
-  missingFields: string[];
+  missingFields: PlanIntakeFieldKey[];
+  question: PlanPlannerQuestion;
 }
 
 export interface PlanPreparationAccepted {
@@ -203,5 +253,5 @@ export interface PlanPreparationAccepted {
 }
 
 export interface PlanPreparationWaiting {
-  clarifyingQuestions: string[];
+  question: PlanPlannerQuestion;
 }

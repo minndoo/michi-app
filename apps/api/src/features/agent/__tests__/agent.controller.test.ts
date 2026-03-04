@@ -99,12 +99,25 @@ describe("AgentController", () => {
         {
           threadId: "thread-1",
           message: "three days a week",
+          questionAnswer: {
+            field: "daysWeeklyFrequency",
+            answer: "three days a week",
+          },
           timezone: "Europe/Warsaw",
         },
       ),
     ).resolves.toEqual({
       threadId: "thread-1",
       jobId: "job-2",
+    });
+    expect(mockedEnqueue).toHaveBeenCalledWith("plan_goal", "user-1", {
+      threadId: "thread-1",
+      message: "three days a week",
+      questionAnswer: {
+        field: "daysWeeklyFrequency",
+        answer: "three days a week",
+      },
+      timezone: "Europe/Warsaw",
     });
   });
 

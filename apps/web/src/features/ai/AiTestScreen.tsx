@@ -18,6 +18,7 @@ import {
 const fallbackTimezone = "UTC";
 
 type AiTestResult = AgentMessageResponse;
+type PlannerQuestion = NonNullable<AgentMessageResponse["plannerQuestion"]>;
 type ChatMessage = {
   id: string;
   role: "user" | "assistant" | "system";
@@ -67,7 +68,7 @@ const createStreamText = (event: AgentStreamEvent): string | null => {
   }
 
   if (event.type === "planner_waiting") {
-    return "Waiting for more planning details.";
+    return event.question.question.question;
   }
 
   if (event.type === "planner_completed") {
@@ -92,6 +93,8 @@ export const AiTestScreen = () => {
   const [lastResult, setLastResult] = useState<AiTestResult | null>(null);
   const [_activeJobId, setActiveJobId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [activePlannerQuestion, setActivePlannerQuestion] =
+    useState<PlannerQuestion | null>(null);
 
   const handleStreamEvent = (event: AgentStreamEvent) => {
     if (
@@ -104,6 +107,10 @@ export const AiTestScreen = () => {
       event.type === "planner_completed"
     ) {
       const text = createStreamText(event);
+
+      if (event.type === "planner_waiting") {
+        setActivePlannerQuestion(event.question);
+      }
 
       if (!text) {
         return;
@@ -123,9 +130,9 @@ export const AiTestScreen = () => {
 
     if (event.type === "result") {
       setLastResult(event.response);
-      setPendingMode(
-        isWaitingPlannerResponse(event.response) ? "plan_goal" : "message",
-      );
+      const nextQuestion = event.response.plannerQuestion ?? null;
+      setActivePlannerQuestion(nextQuestion);
+      setPendingMode(nextQuestion ? "plan_goal" : "message");
       setMessages((current) => [
         ...current,
         {
@@ -168,6 +175,14 @@ export const AiTestScreen = () => {
       threadId: nextThreadId,
       message: trimmedMessage,
       timezone: getTimezone(),
+      ...(activePlannerQuestion
+        ? {
+            questionAnswer: {
+              field: activePlannerQuestion.question.field,
+              answer: trimmedMessage,
+            },
+          }
+        : {}),
     };
 
     setMessage("");
@@ -229,6 +244,7 @@ export const AiTestScreen = () => {
 
       setPendingMode("message");
       setLastResult(null);
+      setActivePlannerQuestion(null);
       setThreadId(createThreadId());
       setErrorMessage(nextMessage);
       setMessages((current) => [
@@ -357,15 +373,41 @@ export const AiTestScreen = () => {
             {pendingMode === "plan_goal" ? "continue plan" : "new message"}
           </Text>
         ) : null}
+        {activePlannerQuestion ? (
+          <YStack
+            gap="$2"
+            p="$3"
+            rounded="$3"
+            borderWidth={1}
+            borderColor="$borderColor"
+            bg="$background"
+          >
+            <Text color="$color10">
+              {activePlannerQuestion.stage === "intake"
+                ? "Missing detail"
+                : "Clarification"}
+            </Text>
+            <Text color="$color12">
+              {activePlannerQuestion.question.question}
+            </Text>
+          </YStack>
+        ) : null}
         <TextArea
-          placeholder="Describe what you want help planning"
+          placeholder={
+            activePlannerQuestion?.placeholder ??
+            "Describe what you want help planning"
+          }
           value={message}
           onChangeText={setMessage}
           height={120}
         />
         <Button onPress={handleMessageSubmit} disabled={isStreaming}>
           <Text color="inherit">
-            {isStreaming ? "Streaming..." : "Send message"}
+            {isStreaming
+              ? "Streaming..."
+              : activePlannerQuestion
+                ? "Answer question"
+                : "Send message"}
           </Text>
         </Button>
       </YStack>

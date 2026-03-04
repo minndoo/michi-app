@@ -6,19 +6,23 @@ import type {
   AgentStreamEvent,
 } from "./agent.types.js";
 import {
-  createRedisSubscriber,
   getOrInitRedisCommandClient,
-  getOrInitRedisPublisherClient,
+  getOrInitRedisSubscriberClient,
 } from "../../lib/redis.js";
 import {
   AgentInfrastructureError,
   AgentJobNotFoundError,
 } from "./agent.errors.js";
+import { createAgentSubscriptionManager } from "./agent.subscription-manager.js";
 
 type StoredAgentJobState = AgentJobStateResponse & {
   jobType: AgentJobType;
   userId: string;
 };
+
+const agentSubscriptionManager = createAgentSubscriptionManager({
+  getClient: getOrInitRedisSubscriberClient,
+});
 
 type CreateInitialJobStateArgs = {
   jobId: string;
@@ -137,7 +141,7 @@ export const publishAgentEvent = async (
   event: AgentStreamEvent,
 ): Promise<void> => {
   try {
-    const publisherClient = await getOrInitRedisPublisherClient();
+    const publisherClient = await getOrInitRedisCommandClient();
     const payload = JSON.stringify(event);
     await publisherClient.publish(
       buildAgentChannelKey(event.jobType, event.jobId),
@@ -148,7 +152,19 @@ export const publishAgentEvent = async (
   }
 };
 
-export const createAgentEventSubscriber = async () => createRedisSubscriber();
+export const subscribeToAgentEvents = async ({
+  jobId,
+  jobType,
+  listener,
+}: {
+  jobId: string;
+  jobType: AgentJobType;
+  listener: (event: AgentStreamEvent) => void;
+}) =>
+  agentSubscriptionManager.subscribe({
+    channel: buildAgentChannelKey(jobType, jobId),
+    listener,
+  });
 
 export const getAgentChannelName = (
   jobType: AgentJobType,

@@ -5,8 +5,8 @@ import { AgentInfrastructureError } from "../features/agent/agent.errors.js";
 let commandClient: ReturnType<typeof createClient> | null = null;
 let commandClientPromise: Promise<ReturnType<typeof createClient>> | null =
   null;
-let publisherClient: ReturnType<typeof createClient> | null = null;
-let publisherClientPromise: Promise<ReturnType<typeof createClient>> | null =
+let subscriberClient: ReturnType<typeof createClient> | null = null;
+let subscriberClientPromise: Promise<ReturnType<typeof createClient>> | null =
   null;
 
 const redisUrl = process.env.REDIS_URL ?? "redis://127.0.0.1:6379";
@@ -45,39 +45,27 @@ export const getOrInitRedisCommandClient = async () => {
   return commandClientPromise;
 };
 
-export const getOrInitRedisPublisherClient = async () => {
-  if (publisherClient) {
-    return publisherClient;
+export const getOrInitRedisSubscriberClient = async () => {
+  if (subscriberClient) {
+    return subscriberClient;
   }
 
-  if (!publisherClientPromise) {
-    publisherClientPromise = createConnectedClient()
+  if (!subscriberClientPromise) {
+    subscriberClientPromise = createConnectedClient()
       .then((client) => {
-        publisherClient = client;
+        subscriberClient = client;
         return client;
       })
       .catch((error) => {
-        logRedisError(error, "Agent Redis publisher initialization failed");
+        logRedisError(error, "Agent Redis subscriber initialization failed");
         throw new AgentInfrastructureError();
       })
       .finally(() => {
-        publisherClientPromise = null;
+        subscriberClientPromise = null;
       });
   }
 
-  return publisherClientPromise;
-};
-
-export const createRedisSubscriber = async () => {
-  const client = createClient({ url: redisUrl });
-
-  try {
-    await client.connect();
-    return client;
-  } catch (error) {
-    logRedisError(error, "Agent Redis subscriber initialization failed");
-    throw new AgentInfrastructureError();
-  }
+  return subscriberClientPromise;
 };
 
 export const getBullmqConnectionOptions = (): QueueOptions["connection"] => {

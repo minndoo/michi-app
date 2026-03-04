@@ -1,4 +1,7 @@
-import type { AgentJobType } from "./agent.types.js";
+import type {
+  AgentJobType,
+  PlannerQuestionClarification,
+} from "./agent.types.js";
 
 export const agentQueueName = "agent";
 
@@ -7,6 +10,7 @@ export interface AgentJobPayload {
   threadId: string;
   timezone: string;
   message: string;
+  questionAnswer?: PlannerQuestionClarification | null;
 }
 
 export const agentJobRouteSegments: Record<AgentJobType, string> = {

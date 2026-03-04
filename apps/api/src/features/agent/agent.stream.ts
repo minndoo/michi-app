@@ -4,10 +4,9 @@ import type {
   Response as ExpressResponse,
 } from "express";
 import {
-  createAgentEventSubscriber,
-  getAgentChannelName,
   getAgentJobStateForUser,
   isTerminalAgentEvent,
+  subscribeToAgentEvents,
 } from "./agent.events.js";
 import {
   AgentInfrastructureError,
@@ -16,21 +15,13 @@ import {
 import type { AgentJobType, AgentStreamEvent } from "./agent.types.js";
 
 type StreamHandlerDeps = {
-  createAgentEventSubscriber: typeof createAgentEventSubscriber;
   getAgentJobStateForUser: typeof getAgentJobStateForUser;
-};
-
-type StreamSubscriber = {
-  subscribe: (
-    channel: string,
-    listener: (message: string) => void,
-  ) => Promise<unknown>;
-  quit: () => Promise<unknown>;
+  subscribeToAgentEvents: typeof subscribeToAgentEvents;
 };
 
 const defaultDeps: StreamHandlerDeps = {
-  createAgentEventSubscriber,
   getAgentJobStateForUser,
+  subscribeToAgentEvents,
 };
 
 const writeSseEvent = (
@@ -107,15 +98,16 @@ export const createStreamHandler =
 
     startSseResponse(response);
 
-    let subscriber: StreamSubscriber | null = null;
+    let unsubscribe: (() => Promise<void>) | null = null;
 
     const cleanup = async () => {
-      if (!subscriber) {
+      if (!unsubscribe) {
         return;
       }
 
-      await subscriber.quit();
-      subscriber = null;
+      const nextUnsubscribe = unsubscribe;
+      unsubscribe = null;
+      await nextUnsubscribe();
     };
 
     request.on("close", () => {
@@ -123,13 +115,10 @@ export const createStreamHandler =
     });
 
     try {
-      const nextSubscriber = await deps.createAgentEventSubscriber();
-      subscriber = nextSubscriber;
-
-      await nextSubscriber.subscribe(
-        getAgentChannelName(jobType, jobId),
-        (payload: string) => {
-          const event = JSON.parse(payload) as AgentStreamEvent;
+      unsubscribe = await deps.subscribeToAgentEvents({
+        jobId,
+        jobType,
+        listener: (event: AgentStreamEvent) => {
           writeSseEvent(response, event);
 
           if (isTerminalAgentEvent(event)) {
@@ -138,7 +127,7 @@ export const createStreamHandler =
             });
           }
         },
-      );
+      });
     } catch (error) {
       writeSseEvent(response, {
         type: "error",

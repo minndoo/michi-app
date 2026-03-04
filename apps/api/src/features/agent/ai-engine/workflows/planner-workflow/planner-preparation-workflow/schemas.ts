@@ -1,4 +1,8 @@
 import { z } from "zod";
+import {
+  plannerFieldKeyValues,
+  planPlannerQuestionInputHintValues,
+} from "../../../../agent.types.js";
 
 export const preparationAcceptedSchema = z.discriminatedUnion("status", [
   z.object({
@@ -14,6 +18,11 @@ export const preparationAcceptedSchema = z.discriminatedUnion("status", [
   }),
   z.object({
     status: z.literal("waiting"),
-    clarifyingQuestions: z.array(z.string()).min(1),
+    question: z.object({
+      field: z.enum(plannerFieldKeyValues),
+      question: z.string(),
+    }),
+    placeholder: z.string(),
+    inputHint: z.enum(planPlannerQuestionInputHintValues),
   }),
 ]);

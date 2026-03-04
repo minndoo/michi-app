@@ -27,10 +27,21 @@ describe("createPlannerWorkflow", () => {
     const workflow = createPlannerWorkflow({
       intakeWorkflow: {
         invoke: vi.fn().mockResolvedValue({
-          accepted: null,
-          denied: {
+          accepted: {
+            goal: "Run a 10k",
+          },
+          waiting: {
             reason: "Missing required planning fields.",
             missingFields: ["baseline", "dueDate"],
+            question: {
+              stage: "intake",
+              question: {
+                field: "baseline",
+                question: "What is your current starting point?",
+              },
+              placeholder: "Example: I can currently run 3 km without stopping",
+              inputHint: "free_text",
+            },
           },
         }),
       } as never,
@@ -45,17 +56,33 @@ describe("createPlannerWorkflow", () => {
     const result = await workflow.invoke(createPlannerInput());
 
     expect(result.planningStage).toBe("intake");
-    expect(result.response).toBe(
-      "I can continue once you provide: baseline, dueDate.",
-    );
+    expect(result.response).toBe("What is your current starting point?");
+    expect(result.plannerQuestion).toEqual({
+      stage: "intake",
+      question: {
+        field: "baseline",
+        question: "What is your current starting point?",
+      },
+      placeholder: "Example: I can currently run 3 km without stopping",
+      inputHint: "free_text",
+    });
   });
 
   it("defaults fresh invocations to intake", async () => {
     const mockedIntakeInvoke = vi.fn().mockResolvedValue({
       accepted: null,
-      denied: {
+      waiting: {
         reason: "Missing required planning fields.",
         missingFields: ["goal"],
+        question: {
+          stage: "intake",
+          question: {
+            field: "goal",
+            question: "What exactly do you want to achieve?",
+          },
+          placeholder: "Example: Run a 10k race",
+          inputHint: "free_text",
+        },
       },
     });
     const workflow = createPlannerWorkflow({
@@ -111,7 +138,7 @@ describe("createPlannerWorkflow", () => {
             relativeDueDate: "in a month",
             daysWeeklyFrequency: 3,
           },
-          denied: null,
+          waiting: null,
         }),
       } as never,
       preparationWorkflow: {
@@ -144,14 +171,22 @@ describe("createPlannerWorkflow", () => {
             relativeDueDate: "in a month",
             daysWeeklyFrequency: 3,
           },
-          denied: null,
+          waiting: null,
         }),
       } as never,
       preparationWorkflow: {
         invoke: vi.fn().mockResolvedValue({
           accepted: null,
           waiting: {
-            clarifyingQuestions: ["How many days each week can you train?"],
+            question: {
+              stage: "preparation",
+              question: {
+                field: "daysWeeklyFrequency",
+                question: "How many days each week can you train?",
+              },
+              placeholder: "Example: 3 days per week",
+              inputHint: "days_per_week",
+            },
           },
         }),
       } as never,
@@ -164,6 +199,15 @@ describe("createPlannerWorkflow", () => {
 
     expect(result.planningStage).toBe("preparation");
     expect(result.response).toBe("How many days each week can you train?");
+    expect(result.plannerQuestion).toEqual({
+      stage: "preparation",
+      question: {
+        field: "daysWeeklyFrequency",
+        question: "How many days each week can you train?",
+      },
+      placeholder: "Example: 3 days per week",
+      inputHint: "days_per_week",
+    });
   });
 
   it("returns refusal from generation", async () => {
@@ -177,7 +221,7 @@ describe("createPlannerWorkflow", () => {
             relativeDueDate: "in one week",
             daysWeeklyFrequency: 7,
           },
-          denied: null,
+          waiting: null,
         }),
       } as never,
       preparationWorkflow: {
@@ -214,6 +258,173 @@ describe("createPlannerWorkflow", () => {
       reason: "The timeline is too aggressive.",
       proposals: ["Extend the due date.", "Reduce the target."],
     });
+  });
+
+  it("refuses resumed preparation when intakeAccepted is missing", async () => {
+    const mockedIntakeInvoke = vi.fn();
+    const mockedPreparationInvoke = vi.fn();
+    const mockedGenerationInvoke = vi.fn();
+    const workflow = createPlannerWorkflow({
+      intakeWorkflow: {
+        invoke: mockedIntakeInvoke,
+      } as never,
+      preparationWorkflow: {
+        invoke: mockedPreparationInvoke,
+      } as never,
+      generationWorkflow: {
+        invoke: mockedGenerationInvoke,
+      } as never,
+    });
+
+    const result = await workflow.invoke({
+      ...createPlannerInput(),
+      planningStage: "preparation",
+      intakeAccepted: null,
+    });
+
+    expect(result.plannerAction).toBe("refuse_plan");
+    expect(result.refusal).toEqual({
+      reason: "The planning session is missing required intake details.",
+      proposals: [
+        "Start a new planning request from /message.",
+        "Continue with a thread that has complete intake details.",
+      ],
+    });
+    expect(mockedIntakeInvoke).not.toHaveBeenCalled();
+    expect(mockedPreparationInvoke).not.toHaveBeenCalled();
+    expect(mockedGenerationInvoke).not.toHaveBeenCalled();
+  });
+
+  it("continues resumed preparation when intakeAccepted is complete", async () => {
+    const mockedIntakeInvoke = vi.fn();
+    const mockedPreparationInvoke = vi.fn().mockResolvedValue({
+      accepted: {
+        goal: "Run a 10k",
+        baseline: "Can run 3km",
+        startDate: "2026-03-03T00:00:00.000Z",
+        dueDate: "2026-04-03T00:00:00.000Z",
+        daysWeeklyFrequency: 3,
+        goalDerivedValue: 70,
+        baselineDerivedValue: 30,
+        goalBaselineGap: 40,
+      },
+      waiting: null,
+    });
+    const mockedGenerationInvoke = vi.fn().mockResolvedValue({
+      plannerAction: "create_plan",
+      plan: {
+        goal: { title: "Run a 10k" },
+        tasks: [{ title: "Run this week" }],
+      },
+      refusal: null,
+    });
+    const workflow = createPlannerWorkflow({
+      intakeWorkflow: {
+        invoke: mockedIntakeInvoke,
+      } as never,
+      preparationWorkflow: {
+        invoke: mockedPreparationInvoke,
+      } as never,
+      generationWorkflow: {
+        invoke: mockedGenerationInvoke,
+      } as never,
+    });
+
+    const result = await workflow.invoke({
+      ...createPlannerInput(),
+      planningStage: "preparation",
+      intakeAccepted: {
+        goal: "Run a 10k",
+        baseline: "Can run 3km",
+        relativeStartDate: "tomorrow",
+        relativeDueDate: "in a month",
+        daysWeeklyFrequency: 3,
+      },
+    });
+
+    expect(result.plannerAction).toBe("create_plan");
+    expect(mockedIntakeInvoke).not.toHaveBeenCalled();
+    expect(mockedPreparationInvoke).toHaveBeenCalledTimes(1);
+    expect(mockedGenerationInvoke).toHaveBeenCalledTimes(1);
+  });
+
+  it("refuses resumed generation when preparationAccepted is missing", async () => {
+    const mockedIntakeInvoke = vi.fn();
+    const mockedPreparationInvoke = vi.fn();
+    const mockedGenerationInvoke = vi.fn();
+    const workflow = createPlannerWorkflow({
+      intakeWorkflow: {
+        invoke: mockedIntakeInvoke,
+      } as never,
+      preparationWorkflow: {
+        invoke: mockedPreparationInvoke,
+      } as never,
+      generationWorkflow: {
+        invoke: mockedGenerationInvoke,
+      } as never,
+    });
+
+    const result = await workflow.invoke({
+      ...createPlannerInput(),
+      planningStage: "generation",
+      preparationAccepted: null,
+    });
+
+    expect(result.plannerAction).toBe("refuse_plan");
+    expect(result.refusal).toEqual({
+      reason: "The planning session is missing required preparation details.",
+      proposals: [
+        "Start a new planning request from /message.",
+        "Continue with a thread that has complete preparation details.",
+      ],
+    });
+    expect(mockedIntakeInvoke).not.toHaveBeenCalled();
+    expect(mockedPreparationInvoke).not.toHaveBeenCalled();
+    expect(mockedGenerationInvoke).not.toHaveBeenCalled();
+  });
+
+  it("continues resumed generation when preparationAccepted is complete", async () => {
+    const mockedIntakeInvoke = vi.fn();
+    const mockedPreparationInvoke = vi.fn();
+    const mockedGenerationInvoke = vi.fn().mockResolvedValue({
+      plannerAction: "create_plan",
+      plan: {
+        goal: { title: "Run a 10k" },
+        tasks: [{ title: "Run this week" }],
+      },
+      refusal: null,
+    });
+    const workflow = createPlannerWorkflow({
+      intakeWorkflow: {
+        invoke: mockedIntakeInvoke,
+      } as never,
+      preparationWorkflow: {
+        invoke: mockedPreparationInvoke,
+      } as never,
+      generationWorkflow: {
+        invoke: mockedGenerationInvoke,
+      } as never,
+    });
+
+    const result = await workflow.invoke({
+      ...createPlannerInput(),
+      planningStage: "generation",
+      preparationAccepted: {
+        goal: "Run a 10k",
+        baseline: "Can run 3km",
+        startDate: "2026-03-03T00:00:00.000Z",
+        dueDate: "2026-04-03T00:00:00.000Z",
+        daysWeeklyFrequency: 3,
+        goalDerivedValue: 70,
+        baselineDerivedValue: 30,
+        goalBaselineGap: 40,
+      },
+    });
+
+    expect(result.plannerAction).toBe("create_plan");
+    expect(mockedIntakeInvoke).not.toHaveBeenCalled();
+    expect(mockedPreparationInvoke).not.toHaveBeenCalled();
+    expect(mockedGenerationInvoke).toHaveBeenCalledTimes(1);
   });
 });
 

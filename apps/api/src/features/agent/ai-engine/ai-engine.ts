@@ -2,6 +2,7 @@ import type {
   AgentJobType,
   AgentMessageResponse,
   AgentStreamEvent,
+  PlannerQuestionClarification,
   PlanningSharedState,
   RoutedIntent,
 } from "../agent.types.js";
@@ -21,6 +22,7 @@ type InvokeArgs = {
   jobId: string;
   jobType: AgentJobType;
   input: string;
+  questionAnswer?: PlannerQuestionClarification | null;
   threadId: string;
   userId: string;
   timezone: string;
@@ -70,15 +72,17 @@ const referenceDate = new Date().toISOString();
 const createSharedState = ({
   threadId,
   userId,
+  questionAnswer,
   timezone,
 }: Pick<
   InvokeArgs,
-  "threadId" | "userId" | "timezone"
+  "threadId" | "userId" | "timezone" | "questionAnswer"
 >): PlanningSharedState => ({
   threadId,
   userId,
   referenceDate,
   timezone,
+  questionAnswer: questionAnswer ?? null,
 });
 
 const createRouterState = (args: InvokeArgs): RouterWorkflowInput => ({
@@ -154,15 +158,19 @@ const toPlannerMessageResponse = ({
   ...(plannerState.plannerAction
     ? { plannerAction: plannerState.plannerAction }
     : {}),
+  ...(plannerState.plannerQuestion
+    ? { plannerQuestion: plannerState.plannerQuestion }
+    : {}),
   ...(plannerState.plan ? { plan: plannerState.plan } : {}),
   ...(plannerState.refusal ? { refusal: plannerState.refusal } : {}),
 });
 
 const isWaitingPlannerResponse = (result: AgentMessageResponse): boolean =>
   result.routedIntent === "plan_goal" &&
-  result.plannerAction == null &&
-  result.plan == null &&
-  result.refusal == null;
+  (result.plannerQuestion != null ||
+    (result.plannerAction == null &&
+      result.plan == null &&
+      result.refusal == null));
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
@@ -208,6 +216,7 @@ const createPlannerAccumulatedState = (
   planningStage: "intake",
   response: "",
   plannerAction: null,
+  plannerQuestion: null,
   plan: null,
   refusal: null,
   intakeAccepted: null,
@@ -445,11 +454,24 @@ export class AiEngine {
     });
 
     if (isWaitingPlannerResponse(response)) {
+      if (!response.plannerQuestion) {
+        yield {
+          type: "result",
+          jobId: args.jobId,
+          threadId: args.threadId,
+          jobType: args.jobType,
+          response,
+        };
+        return;
+      }
+
       yield {
         type: "planner_waiting",
         jobId: args.jobId,
         jobType: args.jobType,
         threadId: args.threadId,
+        stage: response.plannerQuestion.stage,
+        question: response.plannerQuestion,
       };
     } else {
       yield {

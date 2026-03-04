@@ -15,6 +15,23 @@ describe("agentStream", () => {
       isWaitingPlannerResponse({
         threadId: "thread-1",
         routedIntent: "plan_goal",
+        response: "How many days per week can you work on this?",
+        plannerQuestion: {
+          stage: "intake",
+          question: {
+            field: "daysWeeklyFrequency",
+            question: "How many days per week can you work on this?",
+          },
+          placeholder: "Example: 3 days per week",
+          inputHint: "days_per_week",
+        },
+      }),
+    ).toBe(true);
+
+    expect(
+      isWaitingPlannerResponse({
+        threadId: "thread-1",
+        routedIntent: "plan_goal",
         response: "Need more info.",
       }),
     ).toBe(true);
@@ -46,6 +63,11 @@ describe("agentStream", () => {
             );
             controller.enqueue(
               encoder.encode(
+                'event: planner_waiting\ndata: {"type":"planner_waiting","jobId":"job-1","jobType":"message","threadId":"thread-1","stage":"intake","question":{"stage":"intake","question":{"field":"goal","question":"What exactly do you want to achieve?"},"placeholder":"Example: Run a 10k race","inputHint":"free_text"}}\n\n',
+              ),
+            );
+            controller.enqueue(
+              encoder.encode(
                 'event: result\ndata: {"type":"result","jobId":"job-1","jobType":"message","response":{"threadId":"thread-1","routedIntent":"show_tasks","response":"Here are your tasks."}}\n\n',
               ),
             );
@@ -64,7 +86,7 @@ describe("agentStream", () => {
       onEvent,
     });
 
-    expect(onEvent).toHaveBeenCalledTimes(2);
+    expect(onEvent).toHaveBeenCalledTimes(3);
     expect(onEvent).toHaveBeenNthCalledWith(1, {
       type: "router_started",
       jobId: "job-1",
@@ -72,6 +94,22 @@ describe("agentStream", () => {
       threadId: "thread-1",
     });
     expect(onEvent).toHaveBeenNthCalledWith(2, {
+      type: "planner_waiting",
+      jobId: "job-1",
+      jobType: "message",
+      threadId: "thread-1",
+      stage: "intake",
+      question: {
+        stage: "intake",
+        question: {
+          field: "goal",
+          question: "What exactly do you want to achieve?",
+        },
+        placeholder: "Example: Run a 10k race",
+        inputHint: "free_text",
+      },
+    });
+    expect(onEvent).toHaveBeenNthCalledWith(3, {
       type: "result",
       jobId: "job-1",
       jobType: "message",
@@ -84,25 +122,27 @@ describe("agentStream", () => {
   });
 
   it("enqueues an agent run before streaming", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: vi.fn().mockResolvedValue({
-          threadId: "thread-1",
-          jobId: "job-1",
-        }),
-        headers: new Headers({
-          "content-type": "application/json",
-        }),
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({
+        threadId: "thread-1",
+        jobId: "job-1",
       }),
-    );
+      headers: new Headers({
+        "content-type": "application/json",
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
 
     await expect(
       enqueueAgentRun({
         input: {
           threadId: "thread-1",
           message: "show tasks",
+          questionAnswer: {
+            field: "goal",
+            answer: "show tasks",
+          },
           timezone: "Europe/Prague",
         },
         jobType: "message",
@@ -110,6 +150,21 @@ describe("agentStream", () => {
     ).resolves.toEqual({
       threadId: "thread-1",
       jobId: "job-1",
+    });
+    expect(fetchMock).toHaveBeenCalledWith("/api/bff/agent/message", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        threadId: "thread-1",
+        message: "show tasks",
+        questionAnswer: {
+          field: "goal",
+          answer: "show tasks",
+        },
+        timezone: "Europe/Prague",
+      }),
     });
   });
 });

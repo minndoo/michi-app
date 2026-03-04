@@ -7,6 +7,15 @@ describe("agent worker", () => {
   it("publishes domain events unchanged and stores terminal result", async () => {
     const publishAgentEvent = vi.fn().mockResolvedValue(undefined);
     const updateAgentJobStatus = vi.fn().mockResolvedValue(undefined);
+    const runMessageStream = vi.fn(async function* (
+      _userId: string,
+      _jobId: string,
+      _input,
+    ) {
+      for (const event of streamEvents) {
+        yield event;
+      }
+    });
     const streamEvents: AgentStreamEvent[] = [
       {
         type: "router_started",
@@ -42,6 +51,16 @@ describe("agent worker", () => {
         jobId: "job-1",
         jobType: "message",
         threadId: "thread-1",
+        stage: "intake",
+        question: {
+          stage: "intake",
+          question: {
+            field: "daysWeeklyFrequency",
+            question: "How many days per week can you work on this?",
+          },
+          placeholder: "Example: 3 days per week",
+          inputHint: "days_per_week",
+        },
       },
       {
         type: "result",
@@ -51,7 +70,16 @@ describe("agent worker", () => {
         response: {
           threadId: "thread-1",
           routedIntent: "plan_goal",
-          response: "Need more info.",
+          response: "How many days per week can you work on this?",
+          plannerQuestion: {
+            stage: "intake",
+            question: {
+              field: "daysWeeklyFrequency",
+              question: "How many days per week can you work on this?",
+            },
+            placeholder: "Example: 3 days per week",
+            inputHint: "days_per_week",
+          },
         },
       },
     ];
@@ -65,15 +93,15 @@ describe("agent worker", () => {
           threadId: "thread-1",
           timezone: "Europe/Prague",
           message: "help me plan",
+          questionAnswer: {
+            field: "goal",
+            answer: "help me plan",
+          },
         },
       } as unknown as Job,
       {
         service: {
-          runMessageStream: async function* () {
-            for (const event of streamEvents) {
-              yield event;
-            }
-          },
+          runMessageStream,
           continuePlanStream: async function* () {
             yield* [];
           },
@@ -82,6 +110,16 @@ describe("agent worker", () => {
         updateAgentJobStatus,
       },
     );
+
+    expect(runMessageStream).toHaveBeenCalledWith("user-1", "job-1", {
+      threadId: "thread-1",
+      message: "help me plan",
+      questionAnswer: {
+        field: "goal",
+        answer: "help me plan",
+      },
+      timezone: "Europe/Prague",
+    });
 
     expect(publishAgentEvent).toHaveBeenCalledWith({
       type: "run_started",
@@ -98,7 +136,16 @@ describe("agent worker", () => {
       result: {
         threadId: "thread-1",
         routedIntent: "plan_goal",
-        response: "Need more info.",
+        response: "How many days per week can you work on this?",
+        plannerQuestion: {
+          stage: "intake",
+          question: {
+            field: "daysWeeklyFrequency",
+            question: "How many days per week can you work on this?",
+          },
+          placeholder: "Example: 3 days per week",
+          inputHint: "days_per_week",
+        },
       },
     });
     expect(publishAgentEvent).toHaveBeenLastCalledWith({
@@ -112,6 +159,14 @@ describe("agent worker", () => {
   it("publishes failure lifecycle when processing errors", async () => {
     const publishAgentEvent = vi.fn().mockResolvedValue(undefined);
     const updateAgentJobStatus = vi.fn().mockResolvedValue(undefined);
+    const continuePlanStream = vi.fn(async function* (
+      _userId: string,
+      _jobId: string,
+      _input,
+    ) {
+      yield* [];
+      throw new Error("planner offline");
+    });
 
     await expect(
       processAgentJob(
@@ -123,6 +178,10 @@ describe("agent worker", () => {
             threadId: "thread-1",
             timezone: "Europe/Prague",
             message: "three days a week",
+            questionAnswer: {
+              field: "daysWeeklyFrequency",
+              answer: "three days a week",
+            },
           },
         } as unknown as Job,
         {
@@ -130,16 +189,23 @@ describe("agent worker", () => {
             runMessageStream: async function* () {
               yield* [];
             },
-            continuePlanStream: async function* () {
-              yield* [];
-              throw new Error("planner offline");
-            },
+            continuePlanStream,
           },
           publishAgentEvent,
           updateAgentJobStatus,
         },
       ),
     ).rejects.toThrow("planner offline");
+
+    expect(continuePlanStream).toHaveBeenCalledWith("user-1", "job-2", {
+      threadId: "thread-1",
+      message: "three days a week",
+      questionAnswer: {
+        field: "daysWeeklyFrequency",
+        answer: "three days a week",
+      },
+      timezone: "Europe/Prague",
+    });
 
     expect(publishAgentEvent).toHaveBeenCalledWith({
       type: "error",
