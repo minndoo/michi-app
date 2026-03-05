@@ -18,7 +18,7 @@ const createPlannerState = (
   planningStage: "generation",
   response: "",
   plannerAction: null,
-  plannerQuestion: null,
+  plannerQuestions: null,
   plan: null,
   refusal: null,
   intakeAccepted: null,
@@ -127,15 +127,17 @@ describe("AiEngine", () => {
             run_intake: {
               planningStage: "intake",
               response: "Need more info.",
-              plannerQuestion: {
-                stage: "intake",
-                question: {
-                  field: "daysWeeklyFrequency",
-                  question: "How many days per week can you work on this?",
+              plannerQuestions: [
+                {
+                  stage: "intake",
+                  question: {
+                    field: "daysWeeklyFrequency",
+                    question: "How many days per week can you work on this?",
+                  },
+                  placeholder: "Example: 3 days per week",
+                  inputHint: "days_per_week",
                 },
-                placeholder: "Example: 3 days per week",
-                inputHint: "days_per_week",
-              },
+              ],
               plannerAction: null,
               plan: null,
               refusal: null,
@@ -145,14 +147,14 @@ describe("AiEngine", () => {
             run_preparation: {
               planningStage: "preparation",
               response: "Still working.",
-              plannerQuestion: null,
+              plannerQuestions: null,
             },
           },
           {
             run_generation: {
               response: "Created a plan with 3 tasks.",
               plannerAction: "create_plan",
-              plannerQuestion: null,
+              plannerQuestions: null,
               plan: {
                 goal: { title: "Run 10k" },
                 tasks: [{ title: "Run 3 times a week" }],
@@ -190,15 +192,17 @@ describe("AiEngine", () => {
       payload: {
         planningStage: "intake",
         response: "Need more info.",
-        plannerQuestion: {
-          stage: "intake",
-          question: {
-            field: "daysWeeklyFrequency",
-            question: "How many days per week can you work on this?",
+        plannerQuestions: [
+          {
+            stage: "intake",
+            question: {
+              field: "daysWeeklyFrequency",
+              question: "How many days per week can you work on this?",
+            },
+            placeholder: "Example: 3 days per week",
+            inputHint: "days_per_week",
           },
-          placeholder: "Example: 3 days per week",
-          inputHint: "days_per_week",
-        },
+        ],
         plannerAction: null,
         plan: null,
         refusal: null,
@@ -213,7 +217,7 @@ describe("AiEngine", () => {
       payload: {
         planningStage: "preparation",
         response: "Still working.",
-        plannerQuestion: null,
+        plannerQuestions: null,
       },
     });
     expect(events).toContainEqual({
@@ -225,7 +229,7 @@ describe("AiEngine", () => {
       payload: {
         response: "Created a plan with 3 tasks.",
         plannerAction: "create_plan",
-        plannerQuestion: null,
+        plannerQuestions: null,
         plan: {
           goal: { title: "Run 10k" },
           tasks: [{ title: "Run 3 times a week" }],
@@ -264,15 +268,17 @@ describe("AiEngine", () => {
           run_intake: {
             planningStage: "intake",
             response: "How many days per week can you work on this?",
-            plannerQuestion: {
-              stage: "intake",
-              question: {
-                field: "daysWeeklyFrequency",
-                question: "How many days per week can you work on this?",
+            plannerQuestions: [
+              {
+                stage: "intake",
+                question: {
+                  field: "daysWeeklyFrequency",
+                  question: "How many days per week can you work on this?",
+                },
+                placeholder: "Example: 3 days per week",
+                inputHint: "days_per_week",
               },
-              placeholder: "Example: 3 days per week",
-              inputHint: "days_per_week",
-            },
+            ],
             plannerAction: null,
             plan: null,
             refusal: null,
@@ -295,10 +301,12 @@ describe("AiEngine", () => {
       jobId: "job-2",
       jobType: "plan_goal",
       input: "three days a week",
-      questionAnswer: {
-        field: "daysWeeklyFrequency",
-        answer: "three days a week",
-      },
+      questionAnswers: [
+        {
+          field: "daysWeeklyFrequency",
+          answer: "three days a week",
+        },
+      ],
       threadId: "thread-1",
       userId: "user-1",
       timezone: "Europe/Warsaw",
@@ -312,15 +320,17 @@ describe("AiEngine", () => {
       jobType: "plan_goal",
       threadId: "thread-1",
       stage: "intake",
-      question: {
-        stage: "intake",
-        question: {
-          field: "daysWeeklyFrequency",
-          question: "How many days per week can you work on this?",
+      questions: [
+        {
+          stage: "intake",
+          question: {
+            field: "daysWeeklyFrequency",
+            question: "How many days per week can you work on this?",
+          },
+          placeholder: "Example: 3 days per week",
+          inputHint: "days_per_week",
         },
-        placeholder: "Example: 3 days per week",
-        inputHint: "days_per_week",
-      },
+      ],
     });
     expect(events.at(-1)).toEqual({
       type: "result",
@@ -331,23 +341,27 @@ describe("AiEngine", () => {
         threadId: "thread-1",
         routedIntent: "plan_goal",
         response: "How many days per week can you work on this?",
-        plannerQuestion: {
-          stage: "intake",
-          question: {
-            field: "daysWeeklyFrequency",
-            question: "How many days per week can you work on this?",
+        plannerQuestions: [
+          {
+            stage: "intake",
+            question: {
+              field: "daysWeeklyFrequency",
+              question: "How many days per week can you work on this?",
+            },
+            placeholder: "Example: 3 days per week",
+            inputHint: "days_per_week",
           },
-          placeholder: "Example: 3 days per week",
-          inputHint: "days_per_week",
-        },
+        ],
       },
     });
     expect(mockedPlannerWorkflow.stream).toHaveBeenCalledWith(
       expect.objectContaining({
-        questionAnswer: {
-          field: "daysWeeklyFrequency",
-          answer: "three days a week",
-        },
+        questionAnswers: [
+          {
+            field: "daysWeeklyFrequency",
+            answer: "three days a week",
+          },
+        ],
       }),
       expect.any(Object),
     );

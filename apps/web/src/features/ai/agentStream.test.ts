@@ -16,15 +16,17 @@ describe("agentStream", () => {
         threadId: "thread-1",
         routedIntent: "plan_goal",
         response: "How many days per week can you work on this?",
-        plannerQuestion: {
-          stage: "intake",
-          question: {
-            field: "daysWeeklyFrequency",
-            question: "How many days per week can you work on this?",
+        plannerQuestions: [
+          {
+            stage: "intake",
+            question: {
+              field: "daysWeeklyFrequency",
+              question: "How many days per week can you work on this?",
+            },
+            placeholder: "Example: 3 days per week",
+            inputHint: "days_per_week",
           },
-          placeholder: "Example: 3 days per week",
-          inputHint: "days_per_week",
-        },
+        ],
       }),
     ).toBe(true);
 
@@ -63,7 +65,7 @@ describe("agentStream", () => {
             );
             controller.enqueue(
               encoder.encode(
-                'event: planner_waiting\ndata: {"type":"planner_waiting","jobId":"job-1","jobType":"message","threadId":"thread-1","stage":"intake","question":{"stage":"intake","question":{"field":"goal","question":"What exactly do you want to achieve?"},"placeholder":"Example: Run a 10k race","inputHint":"free_text"}}\n\n',
+                'event: planner_waiting\ndata: {"type":"planner_waiting","jobId":"job-1","jobType":"message","threadId":"thread-1","stage":"intake","questions":[{"stage":"intake","question":{"field":"goal","question":"What exactly do you want to achieve?"},"placeholder":"Example: Run a 10k race","inputHint":"free_text"}]}\n\n',
               ),
             );
             controller.enqueue(
@@ -99,15 +101,17 @@ describe("agentStream", () => {
       jobType: "message",
       threadId: "thread-1",
       stage: "intake",
-      question: {
-        stage: "intake",
-        question: {
-          field: "goal",
-          question: "What exactly do you want to achieve?",
+      questions: [
+        {
+          stage: "intake",
+          question: {
+            field: "goal",
+            question: "What exactly do you want to achieve?",
+          },
+          placeholder: "Example: Run a 10k race",
+          inputHint: "free_text",
         },
-        placeholder: "Example: Run a 10k race",
-        inputHint: "free_text",
-      },
+      ],
     });
     expect(onEvent).toHaveBeenNthCalledWith(3, {
       type: "result",
@@ -139,10 +143,12 @@ describe("agentStream", () => {
         input: {
           threadId: "thread-1",
           message: "show tasks",
-          questionAnswer: {
-            field: "goal",
-            answer: "show tasks",
-          },
+          questionAnswers: [
+            {
+              field: "goal",
+              answer: "show tasks",
+            },
+          ],
           timezone: "Europe/Prague",
         },
         jobType: "message",
@@ -159,10 +165,12 @@ describe("agentStream", () => {
       body: JSON.stringify({
         threadId: "thread-1",
         message: "show tasks",
-        questionAnswer: {
-          field: "goal",
-          answer: "show tasks",
-        },
+        questionAnswers: [
+          {
+            field: "goal",
+            answer: "show tasks",
+          },
+        ],
         timezone: "Europe/Prague",
       }),
     });

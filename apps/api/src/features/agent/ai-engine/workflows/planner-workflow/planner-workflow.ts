@@ -43,7 +43,7 @@ type PlannerState = PlanningSharedState & {
   planningStage: PlanningStage;
   intakeAccepted: PlanIntakeAcceptedDraft | null;
   preparationAccepted: PlanPreparationAccepted | null;
-  plannerQuestion: PlanPlannerQuestion | null;
+  plannerQuestions: PlanPlannerQuestion[] | null;
   response: string;
   plannerAction: PlannerAction | null;
   plan: AgentPlannedGoalWithTasks | null;
@@ -56,7 +56,7 @@ export type PlannerWorkflowInput = PlanningSharedState & {
   planningStage?: PlanningStage;
   intakeAccepted?: PlanIntakeAcceptedDraft | null;
   preparationAccepted?: PlanPreparationAccepted | null;
-  plannerQuestion?: PlanPlannerQuestion | null;
+  plannerQuestions?: PlanPlannerQuestion[] | null;
   response?: string;
   plannerAction?: PlannerAction | null;
   plan?: AgentPlannedGoalWithTasks | null;
@@ -106,7 +106,7 @@ const PlannerStateAnnotation = Annotation.Root({
   userId: Annotation<string>(),
   referenceDate: Annotation<string>(),
   timezone: Annotation<string>(),
-  questionAnswer: Annotation<PlanningSharedState["questionAnswer"]>({
+  questionAnswers: Annotation<PlanningSharedState["questionAnswers"]>({
     reducer: (_, update) => update ?? null,
     default: () => null,
   }),
@@ -126,7 +126,7 @@ const PlannerStateAnnotation = Annotation.Root({
     reducer: (_, update) => update ?? null,
     default: () => null,
   }),
-  plannerQuestion: Annotation<PlanPlannerQuestion | null>({
+  plannerQuestions: Annotation<PlanPlannerQuestion[] | null>({
     reducer: (_, update) => update ?? null,
     default: () => null,
   }),
@@ -152,6 +152,18 @@ const buildPlanResponse = (plan: AgentPlannedGoalWithTasks): string =>
   `Created a plan with ${plan.tasks.length} tasks.`;
 
 const buildRefusalResponse = (refusal: AgentRefusal): string => refusal.reason;
+
+const buildWaitingResponse = (questions: PlanPlannerQuestion[]): string => {
+  if (questions.length === 1) {
+    return questions[0]!.question.question;
+  }
+
+  const listedQuestions = questions
+    .map((question, index) => `${index + 1}. ${question.question.question}`)
+    .join("\n");
+
+  return `Please answer the following:\n${listedQuestions}`;
+};
 
 const hasNonEmptyString = (value: unknown): value is string =>
   typeof value === "string" && value.trim().length > 0;
@@ -199,7 +211,7 @@ const runIntake = async (
     userId: state.userId,
     referenceDate: state.referenceDate,
     timezone: state.timezone,
-    questionAnswer: state.questionAnswer,
+    questionAnswers: state.questionAnswers,
     input: state.input,
     accepted: state.intakeAccepted,
     waiting: null,
@@ -209,8 +221,8 @@ const runIntake = async (
     return {
       intakeAccepted: result.accepted,
       planningStage: "intake",
-      plannerQuestion: result.waiting.question,
-      response: result.waiting.question.question.question,
+      plannerQuestions: result.waiting.questions,
+      response: buildWaitingResponse(result.waiting.questions),
       plannerAction: null,
       plan: null,
       refusal: null,
@@ -220,7 +232,7 @@ const runIntake = async (
   return {
     intakeAccepted: result.accepted,
     planningStage: "preparation",
-    plannerQuestion: null,
+    plannerQuestions: null,
   };
 };
 
@@ -240,7 +252,7 @@ const runPreparation = async (
     return {
       planningStage: "preparation",
       plannerAction: "refuse_plan",
-      plannerQuestion: null,
+      plannerQuestions: null,
       response: buildRefusalResponse(refusal),
       plan: null,
       refusal,
@@ -252,7 +264,7 @@ const runPreparation = async (
     userId: state.userId,
     referenceDate: state.referenceDate,
     timezone: state.timezone,
-    questionAnswer: state.questionAnswer,
+    questionAnswers: state.questionAnswers,
     input: state.input,
     intakeAccepted: state.intakeAccepted,
     accepted: state.preparationAccepted,
@@ -262,8 +274,8 @@ const runPreparation = async (
   if (result.waiting) {
     return {
       planningStage: "preparation",
-      plannerQuestion: result.waiting.question,
-      response: result.waiting.question.question.question,
+      plannerQuestions: result.waiting.questions,
+      response: buildWaitingResponse(result.waiting.questions),
       plannerAction: null,
       plan: null,
       refusal: null,
@@ -273,7 +285,7 @@ const runPreparation = async (
   return {
     preparationAccepted: result.accepted,
     planningStage: "generation",
-    plannerQuestion: null,
+    plannerQuestions: null,
   };
 };
 
@@ -293,7 +305,7 @@ const runGeneration = async (
     return {
       planningStage: "generation",
       plannerAction: "refuse_plan",
-      plannerQuestion: null,
+      plannerQuestions: null,
       response: buildRefusalResponse(refusal),
       plan: null,
       refusal,
@@ -315,7 +327,7 @@ const runGeneration = async (
   if (result.plannerAction === "refuse_plan" && result.refusal) {
     return {
       plannerAction: "refuse_plan",
-      plannerQuestion: null,
+      plannerQuestions: null,
       response: buildRefusalResponse(result.refusal),
       plan: null,
       refusal: result.refusal,
@@ -324,7 +336,7 @@ const runGeneration = async (
 
   return {
     plannerAction: "create_plan",
-    plannerQuestion: null,
+    plannerQuestions: null,
     response: buildPlanResponse(result.plan!),
     plan: result.plan,
     refusal: null,

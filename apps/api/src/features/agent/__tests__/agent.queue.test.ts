@@ -49,7 +49,7 @@ describe("AgentQueueService", () => {
     });
   });
 
-  it("enqueues questionAnswer in the BullMQ payload", async () => {
+  it("enqueues questionAnswers in the BullMQ payload", async () => {
     add.mockResolvedValueOnce({ id: "job-1" });
 
     const { AgentQueueService } = await import("../agent.queue.js");
@@ -61,10 +61,12 @@ describe("AgentQueueService", () => {
       service.enqueue("plan_goal", "user-1", {
         threadId: "thread-1",
         message: "I can run 1km",
-        questionAnswer: {
-          field: "baseline",
-          answer: "I can run 1km",
-        },
+        questionAnswers: [
+          {
+            field: "baseline",
+            answer: "I can run 1km",
+          },
+        ],
         timezone: "Europe/Prague",
       }),
     ).resolves.toEqual({
@@ -77,14 +79,16 @@ describe("AgentQueueService", () => {
       threadId: "thread-1",
       timezone: "Europe/Prague",
       message: "I can run 1km",
-      questionAnswer: {
-        field: "baseline",
-        answer: "I can run 1km",
-      },
+      questionAnswers: [
+        {
+          field: "baseline",
+          answer: "I can run 1km",
+        },
+      ],
     });
   });
 
-  it("normalizes missing questionAnswer to null", async () => {
+  it("normalizes missing questionAnswers to null", async () => {
     add.mockResolvedValueOnce({ id: "job-2" });
 
     const { AgentQueueService } = await import("../agent.queue.js");
@@ -108,7 +112,7 @@ describe("AgentQueueService", () => {
       threadId: "thread-2",
       timezone: "Europe/Prague",
       message: "show tasks",
-      questionAnswer: null,
+      questionAnswers: null,
     });
   });
 });

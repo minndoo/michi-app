@@ -10,7 +10,7 @@ export interface AgentJobPayload {
   threadId: string;
   timezone: string;
   message: string;
-  questionAnswer?: PlannerQuestionClarification | null;
+  questionAnswers?: PlannerQuestionClarification[] | null;
 }
 
 export const agentJobRouteSegments: Record<AgentJobType, string> = {

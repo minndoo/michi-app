@@ -33,7 +33,7 @@ const PlannerPreparationStateAnnotation = Annotation.Root({
   userId: Annotation<string>(),
   referenceDate: Annotation<string>(),
   timezone: Annotation<string>(),
-  questionAnswer: Annotation<PlanningSharedState["questionAnswer"]>({
+  questionAnswers: Annotation<PlanningSharedState["questionAnswers"]>({
     reducer: (_, update) => update ?? null,
     default: () => null,
   }),
@@ -58,12 +58,12 @@ const addDays = (isoDate: string, days: number): string => {
 };
 
 const buildPrompt = (state: PlannerPreparationWorkflowState): string => {
-  const clarification = state.questionAnswer
-    ? createClarification(state.questionAnswer)
+  const clarification = state.questionAnswers?.length
+    ? createClarification(state.questionAnswers)
     : null;
 
   return `
-Normalize and quantify the intake planning input.
+Normalize and clarify the intake planning input.
 
 Reference date: ${state.referenceDate}
 Timezone: ${state.timezone}
@@ -80,7 +80,8 @@ ${clarification}
     : ""
 }Return either:
 - accepted normalized planning input
-- waiting with one question object containing question.field, question.question, placeholder, and inputHint
+- waiting with one or more question objects under questions[] containing question.field, question.question, placeholder, and inputHint
+Ask clarification questions when input remains ambiguous.
 `;
 };
 
@@ -116,12 +117,12 @@ const llmCallPlannerPreparation = async (
       return {
         accepted: null,
         waiting: {
-          question: {
+          questions: response.questions.map((question) => ({
             stage: "preparation",
-            question: response.question,
-            placeholder: response.placeholder,
-            inputHint: response.inputHint,
-          },
+            question: question.question,
+            placeholder: question.placeholder,
+            inputHint: question.inputHint,
+          })),
         },
       };
     }

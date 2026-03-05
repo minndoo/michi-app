@@ -37,15 +37,17 @@ describe("agent subscription manager", () => {
         jobType: "plan_goal",
         threadId: "thread-1",
         stage: "intake",
-        question: {
-          stage: "intake",
-          question: {
-            field: "goal",
-            question: "What exactly do you want to achieve?",
+        questions: [
+          {
+            stage: "intake",
+            question: {
+              field: "goal",
+              question: "What exactly do you want to achieve?",
+            },
+            placeholder: "Example: Run a 10k race",
+            inputHint: "free_text",
           },
-          placeholder: "Example: Run a 10k race",
-          inputHint: "free_text",
-        },
+        ],
       }),
     );
 

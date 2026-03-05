@@ -22,7 +22,7 @@ type InvokeArgs = {
   jobId: string;
   jobType: AgentJobType;
   input: string;
-  questionAnswer?: PlannerQuestionClarification | null;
+  questionAnswers?: PlannerQuestionClarification[] | null;
   threadId: string;
   userId: string;
   timezone: string;
@@ -72,17 +72,17 @@ const referenceDate = new Date().toISOString();
 const createSharedState = ({
   threadId,
   userId,
-  questionAnswer,
+  questionAnswers,
   timezone,
 }: Pick<
   InvokeArgs,
-  "threadId" | "userId" | "timezone" | "questionAnswer"
+  "threadId" | "userId" | "timezone" | "questionAnswers"
 >): PlanningSharedState => ({
   threadId,
   userId,
   referenceDate,
   timezone,
-  questionAnswer: questionAnswer ?? null,
+  questionAnswers: questionAnswers ?? null,
 });
 
 const createRouterState = (args: InvokeArgs): RouterWorkflowInput => ({
@@ -158,8 +158,8 @@ const toPlannerMessageResponse = ({
   ...(plannerState.plannerAction
     ? { plannerAction: plannerState.plannerAction }
     : {}),
-  ...(plannerState.plannerQuestion
-    ? { plannerQuestion: plannerState.plannerQuestion }
+  ...(plannerState.plannerQuestions
+    ? { plannerQuestions: plannerState.plannerQuestions }
     : {}),
   ...(plannerState.plan ? { plan: plannerState.plan } : {}),
   ...(plannerState.refusal ? { refusal: plannerState.refusal } : {}),
@@ -167,7 +167,7 @@ const toPlannerMessageResponse = ({
 
 const isWaitingPlannerResponse = (result: AgentMessageResponse): boolean =>
   result.routedIntent === "plan_goal" &&
-  (result.plannerQuestion != null ||
+  ((result.plannerQuestions?.length ?? 0) > 0 ||
     (result.plannerAction == null &&
       result.plan == null &&
       result.refusal == null));
@@ -216,7 +216,7 @@ const createPlannerAccumulatedState = (
   planningStage: "intake",
   response: "",
   plannerAction: null,
-  plannerQuestion: null,
+  plannerQuestions: null,
   plan: null,
   refusal: null,
   intakeAccepted: null,
@@ -454,7 +454,7 @@ export class AiEngine {
     });
 
     if (isWaitingPlannerResponse(response)) {
-      if (!response.plannerQuestion) {
+      if (!response.plannerQuestions?.length) {
         yield {
           type: "result",
           jobId: args.jobId,
@@ -470,8 +470,8 @@ export class AiEngine {
         jobId: args.jobId,
         jobType: args.jobType,
         threadId: args.threadId,
-        stage: response.plannerQuestion.stage,
-        question: response.plannerQuestion,
+        stage: response.plannerQuestions[0]!.stage,
+        questions: response.plannerQuestions,
       };
     } else {
       yield {
@@ -509,7 +509,8 @@ export class AiEngine {
     let routedIntent: RoutedIntent | null = null;
 
     for await (const chunk of routerStream) {
-      routedIntent = getRoutedIntentFromChunk(chunk) ?? routedIntent;
+      const routedIntentCandidate = getRoutedIntentFromChunk(chunk);
+      routedIntent = routedIntentCandidate ?? routedIntent;
     }
 
     if (routedIntent == null) {

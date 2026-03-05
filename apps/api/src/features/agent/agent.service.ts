@@ -11,7 +11,7 @@ type AgentServiceDeps = {
       jobId: string;
       jobType: AgentJobType;
       input: string;
-      questionAnswer?: AgentMessageInput["questionAnswer"];
+      questionAnswers?: AgentMessageInput["questionAnswers"];
       requireCheckpoint?: boolean;
       threadId: string;
       userId: string;
@@ -21,7 +21,7 @@ type AgentServiceDeps = {
       jobId: string;
       jobType: AgentJobType;
       input: string;
-      questionAnswer?: AgentMessageInput["questionAnswer"];
+      questionAnswers?: AgentMessageInput["questionAnswers"];
       threadId: string;
       userId: string;
       timezone: string;
@@ -46,7 +46,7 @@ class AgentService {
       jobType: "message",
       userId,
       input: input.message,
-      questionAnswer: input.questionAnswer,
+      questionAnswers: input.questionAnswers,
       threadId: input.threadId,
       timezone: input.timezone,
     });
@@ -62,7 +62,7 @@ class AgentService {
       jobType: "plan_goal",
       userId,
       input: input.message,
-      questionAnswer: input.questionAnswer,
+      questionAnswers: input.questionAnswers,
       requireCheckpoint: true,
       threadId: input.threadId,
       timezone: input.timezone,

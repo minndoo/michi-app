@@ -18,11 +18,17 @@ export const preparationAcceptedSchema = z.discriminatedUnion("status", [
   }),
   z.object({
     status: z.literal("waiting"),
-    question: z.object({
-      field: z.enum(plannerFieldKeyValues),
-      question: z.string(),
-    }),
-    placeholder: z.string(),
-    inputHint: z.enum(planPlannerQuestionInputHintValues),
+    questions: z
+      .array(
+        z.object({
+          question: z.object({
+            field: z.enum(plannerFieldKeyValues),
+            question: z.string(),
+          }),
+          placeholder: z.string(),
+          inputHint: z.enum(planPlannerQuestionInputHintValues),
+        }),
+      )
+      .min(1),
   }),
 ]);

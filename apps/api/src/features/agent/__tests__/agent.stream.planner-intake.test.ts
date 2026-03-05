@@ -67,7 +67,7 @@ const createPlannerState = (
   planningStage: "intake",
   intakeAccepted: null,
   preparationAccepted: null,
-  plannerQuestion: null,
+  plannerQuestions: null,
   response: "",
   plannerAction: null,
   plan: null,
@@ -105,20 +105,20 @@ describe("agent stream planner intake contracts", () => {
               relativeDueDate: "in a month",
               daysWeeklyFrequency: 3,
             },
-            plannerQuestion: null,
+            plannerQuestions: null,
           },
         },
         {
           run_preparation: {
             planningStage: "generation",
-            plannerQuestion: null,
+            plannerQuestions: null,
           },
         },
         {
           run_generation: {
             response: "Created a plan with 2 tasks.",
             plannerAction: "create_plan",
-            plannerQuestion: null,
+            plannerQuestions: null,
             plan: {
               goal: { title: "Run a 10k" },
               tasks: [{ title: "Run three times this week" }],
@@ -173,7 +173,7 @@ describe("agent stream planner intake contracts", () => {
             run_intake: {
               planningStage: "intake",
               response: question.question.question,
-              plannerQuestion: question,
+              plannerQuestions: [question],
               plannerAction: null,
               plan: null,
               refusal: null,
@@ -203,7 +203,7 @@ describe("agent stream planner intake contracts", () => {
         jobType: "plan_goal",
         threadId: "thread-1",
         stage: "intake",
-        question,
+        questions: [question],
       });
       expect(events.at(-1)).toEqual({
         type: "result",
@@ -214,7 +214,7 @@ describe("agent stream planner intake contracts", () => {
           threadId: "thread-1",
           routedIntent: "plan_goal",
           response: question.question.question,
-          plannerQuestion: question,
+          plannerQuestions: [question],
         },
       });
     },
@@ -236,7 +236,7 @@ describe("agent stream planner intake contracts", () => {
           run_preparation: {
             planningStage: "preparation",
             response: question.question.question,
-            plannerQuestion: question,
+            plannerQuestions: [question],
             plannerAction: null,
             plan: null,
             refusal: null,
@@ -266,7 +266,7 @@ describe("agent stream planner intake contracts", () => {
       jobType: "plan_goal",
       threadId: "thread-1",
       stage: "preparation",
-      question,
+      questions: [question],
     });
     expect(events.at(-1)).toEqual({
       type: "result",
@@ -277,7 +277,7 @@ describe("agent stream planner intake contracts", () => {
         threadId: "thread-1",
         routedIntent: "plan_goal",
         response: question.question.question,
-        plannerQuestion: question,
+        plannerQuestions: [question],
       },
     });
   });

@@ -9,7 +9,6 @@ import type {
   PlanningSharedState,
 } from "../../../../agent.types.js";
 import { intakeExtractionSchema } from "./schemas.js";
-import { createClarification } from "../planner-clarification.js";
 
 type PlannerIntakeState = PlanningSharedState & {
   input: string;
@@ -34,7 +33,7 @@ const PlannerIntakeStateAnnotation = Annotation.Root({
   userId: Annotation<string>(),
   referenceDate: Annotation<string>(),
   timezone: Annotation<string>(),
-  questionAnswer: Annotation<PlanningSharedState["questionAnswer"]>({
+  questionAnswers: Annotation<PlanningSharedState["questionAnswers"]>({
     reducer: (_, update) => update ?? null,
     default: () => null,
   }),
@@ -49,29 +48,46 @@ const PlannerIntakeStateAnnotation = Annotation.Root({
   }),
 });
 
+const getUserDefinedFields = (
+  state: PlannerIntakeWorkflowState,
+): Partial<Record<PlanIntakeFieldKey, string>> => {
+  const userDefinedFields: Partial<Record<PlanIntakeFieldKey, string>> = {};
+
+  for (const questionAnswer of state.questionAnswers ?? []) {
+    const trimmedAnswer = questionAnswer.answer.trim();
+
+    if (!trimmedAnswer) {
+      continue;
+    }
+
+    userDefinedFields[questionAnswer.field] = trimmedAnswer;
+  }
+
+  return userDefinedFields;
+};
+
 const buildPrompt = (state: PlannerIntakeWorkflowState): string => {
   const missingFields = getMissingFields(state.accepted ?? null);
-  const clarification = state.questionAnswer
-    ? createClarification(state.questionAnswer)
-    : "none";
+  const alreadyAcceptedFields = state.accepted ?? {};
+  const userDefinedFields = getUserDefinedFields(state);
 
   return `
 You are extracting planner intake fields from a planning conversation.
 
 This turn is one of two modes:
 1. an initial planning request containing multiple fields
-2. a follow-up answer to one planner question about one missing field
+2. follow-up answers to one or more planner questions about missing fields
 
-Already accepted fields:
-${JSON.stringify(state.accepted ?? {}, null, 2)}
+alreadyAcceptedFields:
+${JSON.stringify(alreadyAcceptedFields, null, 2)}
+
+userDefinedFields:
+${JSON.stringify(userDefinedFields, null, 2)}
 
 Missing fields before this turn:
 ${JSON.stringify(missingFields)}
 
-Clarifications:
-${clarification}
-
-Latest user input:
+latestUserInput:
 ${state.input}
 
 Reference date: ${state.referenceDate}
@@ -87,31 +103,32 @@ Allowed fields only:
 - daysWeeklyFrequency
 
 How to use context:
-- Already accepted fields are context only.
-- Never modify, restate, correct, or reinterpret already accepted fields.
+- alreadyAcceptedFields are context only.
+- Never modify, restate, correct, or reinterpret alreadyAcceptedFields.
 - Missing fields are extraction priority only. They are not proof that the latest user input answers them.
-- Clarifications are the strongest hint for what field the user is answering, especially for short answers.
-- The latest user input is the only source of extracted values.
+- userDefinedFields are user-provided field answers and part of the same message context as latestUserInput.
+- Use both latestUserInput and userDefinedFields as extraction sources for this turn.
 
 Decision rules and precedence:
-1. If Clarifications is not "none", first check whether the latest user input clearly answers that clarified field.
-2. If it clearly answers that clarified field, extract only that supported field or its supported date variant.
-3. If it does not clearly answer that clarified field, do not force extraction.
-4. If there is no clarification, consider whether the latest user input clearly answers one currently missing field.
-5. If the latest user input could reasonably fit multiple supported fields, extract nothing.
-6. Never overwrite already accepted fields.
+1. Extract zero to many fields independently in one turn.
+2. For each field independently, extract only when value is clearly answered by latestUserInput and/or userDefinedFields.
+3. If a field is unclear or ambiguous, omit that field only; keep any other clear field extractions.
+4. Never overwrite alreadyAcceptedFields.
+5. Both exact calendar dates and relative date phrases are valid date answers.
+6. Relative phrases like "today", "tomorrow", "next week", "in 6 weeks", and "in 10 days" may map to relativeStartDate/relativeDueDate.
+7. Explicit calendar dates like "2026-03-12" or "2026-04-20" may map to startDate/dueDate.
 
 Short-answer rules:
 - Short fragment answers are expected in follow-up turns.
 - Examples of short fragments: "run 1km", "tomorrow", "in 6 weeks", "3 days".
-- If Clarifications says baseline and the user says "run 1km", interpret it as baseline if that is a reasonable fit.
-- If Clarifications says startDate and the user says "tomorrow", extract relativeStartDate.
-- If Clarifications says dueDate and the user says "tomorrow", extract relativeDueDate.
-- If Clarifications says daysWeeklyFrequency and the user says "3 days", extract daysWeeklyFrequency = 3.
-- If no clarification exists and a short fragment could fit multiple supported fields, extract nothing.
+- If userDefinedFields.baseline is "run 1km", interpret it as baseline if that is a reasonable fit.
+- If userDefinedFields.startDate is "tomorrow", extract relativeStartDate.
+- If userDefinedFields.dueDate is "in 6 weeks", extract relativeDueDate.
+- If userDefinedFields.daysWeeklyFrequency is "3 days", extract daysWeeklyFrequency = 3.
+- If a short fragment could fit multiple supported fields and no field-targeting signal exists, omit that ambiguous field.
 
 Do not extract:
-- If the latest user input is ambiguous, vague, unrelated, or unsupported, return extracted: {}.
+- If latestUserInput and userDefinedFields are both ambiguous, vague, unrelated, or unsupported, return extracted: {}.
 - If you do not clearly understand a value, do not extract it.
 - Do not guess baseline, cadence, or dates.
 - Do not convert vague phrasing into numeric cadence unless it is directly supported.
@@ -119,53 +136,70 @@ Do not extract:
 - Do not evaluate feasibility.
 - Do not derive preparedness values.
 - Do not ask preparation-style clarifications.
+- If a date phrase is vague (for example "sometime soon"), omit that date field instead of guessing.
 - Never set both startDate and relativeStartDate.
 - Never set both dueDate and relativeDueDate.
 
 Negative examples:
 - Missing fields: ["goal", "baseline"]
-- Clarifications: none
-- Latest user input: "run 1km"
+- userDefinedFields: {}
+- latestUserInput: "run 1km"
 - Output: { "extracted": {} }
 
 - Missing fields: ["baseline"]
-- Clarifications:
-baseline: not sure
-- Latest user input: "not sure"
+- userDefinedFields: { "baseline": "not sure" }
+- latestUserInput: "not sure"
 - Output: { "extracted": {} }
 
 - Missing fields: ["daysWeeklyFrequency"]
-- Clarifications:
-daysWeeklyFrequency: sometimes
-- Latest user input: "sometimes"
+- userDefinedFields: { "daysWeeklyFrequency": "sometimes" }
+- latestUserInput: "sometimes"
+- Output: { "extracted": {} }
+
+- Missing fields: ["startDate"]
+- userDefinedFields: { "startDate": "sometime soon" }
+- latestUserInput: "sometime soon"
 - Output: { "extracted": {} }
 
 Positive examples:
-- Already accepted fields: { "goal": "Run a 10k" }
+- alreadyAcceptedFields: { "goal": "Run a 10k" }
 - Missing fields: ["baseline"]
-- Clarifications:
-baseline: run 1km
-- Latest user input: "run 1km"
+- userDefinedFields: { "baseline": "run 1km" }
+- latestUserInput: "run 1km"
 - Output: { "extracted": { "baseline": "run 1km" } }
 
-- Clarifications:
-startDate: tomorrow
-- Latest user input: "tomorrow"
+- userDefinedFields: { "startDate": "tomorrow" }
+- latestUserInput: "tomorrow"
 - Output: { "extracted": { "relativeStartDate": "tomorrow" } }
 
-- Clarifications:
-dueDate: in 6 weeks
-- Latest user input: "in 6 weeks"
+- userDefinedFields: { "dueDate": "in 6 weeks" }
+- latestUserInput: "in 6 weeks"
 - Output: { "extracted": { "relativeDueDate": "in 6 weeks" } }
 
-- Clarifications:
-daysWeeklyFrequency: 3 days
-- Latest user input: "3 days"
+- userDefinedFields: { "startDate": "next week" }
+- latestUserInput: "next week"
+- Output: { "extracted": { "relativeStartDate": "next week" } }
+
+- userDefinedFields: { "startDate": "2026-03-12" }
+- latestUserInput: "2026-03-12"
+- Output: { "extracted": { "startDate": "2026-03-12" } }
+
+- userDefinedFields: { "dueDate": "2026-04-20" }
+- latestUserInput: "2026-04-20"
+- Output: { "extracted": { "dueDate": "2026-04-20" } }
+
+- userDefinedFields: { "daysWeeklyFrequency": "3 days" }
+- latestUserInput: "3 days"
 - Output: { "extracted": { "daysWeeklyFrequency": 3 } }
 
+- Missing fields: ["baseline", "daysWeeklyFrequency"]
+- userDefinedFields: { "baseline": "can run 3km", "daysWeeklyFrequency": "3 days per week" }
+- latestUserInput: "I can run 3km and train 3 days weekly"
+- Output: { "extracted": { "baseline": "can run 3km", "daysWeeklyFrequency": 3 } }
+
 Return JSON with:
-- extracted: object containing only supported fields that the latest user input clearly answers, using Clarifications and Missing fields only to determine which field the answer is about
-- If the latest user input does not clearly answer a single supported field, return extracted: {}
+- extracted: object containing only supported fields clearly answered by latestUserInput and/or userDefinedFields
+- If no supported field is clearly answered, return extracted: {}
 `;
 };
 
@@ -354,13 +388,15 @@ const llmCallPlannerIntake = async (
   const missingFields = getMissingFields(nextAccepted);
 
   if (missingFields.length > 0) {
-    const question = getQuestionForField(missingFields[0]!);
+    const questions = missingFields.map((missingField) =>
+      getQuestionForField(missingField),
+    );
     return {
       accepted: nextAccepted,
       waiting: {
         reason: "Missing required planning fields.",
         missingFields,
-        question,
+        questions,
       },
     };
   }

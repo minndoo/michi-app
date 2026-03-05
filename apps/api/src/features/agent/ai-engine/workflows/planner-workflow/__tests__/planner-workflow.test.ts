@@ -33,15 +33,28 @@ describe("createPlannerWorkflow", () => {
           waiting: {
             reason: "Missing required planning fields.",
             missingFields: ["baseline", "dueDate"],
-            question: {
-              stage: "intake",
-              question: {
-                field: "baseline",
-                question: "What is your current starting point?",
+            questions: [
+              {
+                stage: "intake",
+                question: {
+                  field: "baseline",
+                  question: "What is your current starting point?",
+                },
+                placeholder:
+                  "Example: I can currently run 3 km without stopping",
+                inputHint: "free_text",
               },
-              placeholder: "Example: I can currently run 3 km without stopping",
-              inputHint: "free_text",
-            },
+              {
+                stage: "intake",
+                question: {
+                  field: "dueDate",
+                  question:
+                    'When should this be completed? You can answer with a date or something like "in 6 weeks".',
+                },
+                placeholder: "Example: in 6 weeks",
+                inputHint: "date_or_relative",
+              },
+            ],
           },
         }),
       } as never,
@@ -56,16 +69,30 @@ describe("createPlannerWorkflow", () => {
     const result = await workflow.invoke(createPlannerInput());
 
     expect(result.planningStage).toBe("intake");
-    expect(result.response).toBe("What is your current starting point?");
-    expect(result.plannerQuestion).toEqual({
-      stage: "intake",
-      question: {
-        field: "baseline",
-        question: "What is your current starting point?",
+    expect(result.response).toBe(
+      'Please answer the following:\n1. What is your current starting point?\n2. When should this be completed? You can answer with a date or something like "in 6 weeks".',
+    );
+    expect(result.plannerQuestions).toEqual([
+      {
+        stage: "intake",
+        question: {
+          field: "baseline",
+          question: "What is your current starting point?",
+        },
+        placeholder: "Example: I can currently run 3 km without stopping",
+        inputHint: "free_text",
       },
-      placeholder: "Example: I can currently run 3 km without stopping",
-      inputHint: "free_text",
-    });
+      {
+        stage: "intake",
+        question: {
+          field: "dueDate",
+          question:
+            'When should this be completed? You can answer with a date or something like "in 6 weeks".',
+        },
+        placeholder: "Example: in 6 weeks",
+        inputHint: "date_or_relative",
+      },
+    ]);
   });
 
   it("defaults fresh invocations to intake", async () => {
@@ -74,15 +101,17 @@ describe("createPlannerWorkflow", () => {
       waiting: {
         reason: "Missing required planning fields.",
         missingFields: ["goal"],
-        question: {
-          stage: "intake",
-          question: {
-            field: "goal",
-            question: "What exactly do you want to achieve?",
+        questions: [
+          {
+            stage: "intake",
+            question: {
+              field: "goal",
+              question: "What exactly do you want to achieve?",
+            },
+            placeholder: "Example: Run a 10k race",
+            inputHint: "free_text",
           },
-          placeholder: "Example: Run a 10k race",
-          inputHint: "free_text",
-        },
+        ],
       },
     });
     const workflow = createPlannerWorkflow({
@@ -178,15 +207,17 @@ describe("createPlannerWorkflow", () => {
         invoke: vi.fn().mockResolvedValue({
           accepted: null,
           waiting: {
-            question: {
-              stage: "preparation",
-              question: {
-                field: "daysWeeklyFrequency",
-                question: "How many days each week can you train?",
+            questions: [
+              {
+                stage: "preparation",
+                question: {
+                  field: "daysWeeklyFrequency",
+                  question: "How many days each week can you train?",
+                },
+                placeholder: "Example: 3 days per week",
+                inputHint: "days_per_week",
               },
-              placeholder: "Example: 3 days per week",
-              inputHint: "days_per_week",
-            },
+            ],
           },
         }),
       } as never,
@@ -199,15 +230,17 @@ describe("createPlannerWorkflow", () => {
 
     expect(result.planningStage).toBe("preparation");
     expect(result.response).toBe("How many days each week can you train?");
-    expect(result.plannerQuestion).toEqual({
-      stage: "preparation",
-      question: {
-        field: "daysWeeklyFrequency",
-        question: "How many days each week can you train?",
+    expect(result.plannerQuestions).toEqual([
+      {
+        stage: "preparation",
+        question: {
+          field: "daysWeeklyFrequency",
+          question: "How many days each week can you train?",
+        },
+        placeholder: "Example: 3 days per week",
+        inputHint: "days_per_week",
       },
-      placeholder: "Example: 3 days per week",
-      inputHint: "days_per_week",
-    });
+    ]);
   });
 
   it("returns refusal from generation", async () => {

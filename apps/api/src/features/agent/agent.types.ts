@@ -40,7 +40,7 @@ export interface PlannerQuestionClarification {
 export interface AgentMessageInput extends AgentInput {
   threadId: string;
   message: string;
-  questionAnswer?: PlannerQuestionClarification | null;
+  questionAnswers?: PlannerQuestionClarification[] | null;
 }
 
 export interface AgentPlannedGoal {
@@ -65,7 +65,7 @@ export interface AgentMessageResponse {
   routedIntent: RoutedIntent;
   response: string;
   plannerAction?: PlannerAction;
-  plannerQuestion?: PlanPlannerQuestion;
+  plannerQuestions?: PlanPlannerQuestion[];
   plan?: AgentPlannedGoalWithTasks;
   refusal?: AgentRefusal;
 }
@@ -140,7 +140,7 @@ export interface AgentStreamPlannerWaitingEvent {
   jobType: AgentJobType;
   threadId: string;
   stage: PlannerQuestionStage;
-  question: PlanPlannerQuestion;
+  questions: PlanPlannerQuestion[];
 }
 
 export interface AgentStreamPlannerCompletedEvent {
@@ -191,7 +191,7 @@ export interface PlanningSharedState {
   userId: string;
   referenceDate: string;
   timezone: string;
-  questionAnswer?: PlannerQuestionClarification | null;
+  questionAnswers?: PlannerQuestionClarification[] | null;
 }
 
 export type PlanningStage = "intake" | "preparation" | "generation";
@@ -238,7 +238,7 @@ export type PlanIntakeAcceptedDraft = Partial<PlanIntakeAccepted>;
 export interface PlanIntakeWaiting {
   reason: string;
   missingFields: PlanIntakeFieldKey[];
-  question: PlanPlannerQuestion;
+  questions: PlanPlannerQuestion[];
 }
 
 export interface PlanPreparationAccepted {
@@ -253,5 +253,5 @@ export interface PlanPreparationAccepted {
 }
 
 export interface PlanPreparationWaiting {
-  question: PlanPlannerQuestion;
+  questions: PlanPlannerQuestion[];
 }

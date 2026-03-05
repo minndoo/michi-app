@@ -65,13 +65,13 @@ export const processAgentJob = async (
         ? deps.service.runMessageStream(job.data.userId, jobId, {
             threadId: job.data.threadId,
             message: job.data.message,
-            questionAnswer: job.data.questionAnswer ?? null,
+            questionAnswers: job.data.questionAnswers ?? null,
             timezone: job.data.timezone,
           })
         : deps.service.continuePlanStream(job.data.userId, jobId, {
             threadId: job.data.threadId,
             message: job.data.message,
-            questionAnswer: job.data.questionAnswer ?? null,
+            questionAnswers: job.data.questionAnswers ?? null,
             timezone: job.data.timezone,
           });
 

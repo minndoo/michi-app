@@ -69,7 +69,7 @@ export class AgentQueueService {
         threadId: input.threadId,
         timezone: input.timezone,
         message: input.message,
-        questionAnswer: input.questionAnswer ?? null,
+        questionAnswers: input.questionAnswers ?? null,
       });
       const jobId = String(job.id);
 

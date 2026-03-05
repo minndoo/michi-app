@@ -26,12 +26,24 @@ describe("createPlannerPreparationWorkflow", () => {
         withStructuredOutput: vi.fn().mockReturnValue({
           invoke: vi.fn().mockResolvedValue({
             status: "waiting",
-            question: {
-              field: "baseline",
-              question: "Can you be more specific about your baseline?",
-            },
-            placeholder: "Example: I can run 3 km without stopping",
-            inputHint: "free_text",
+            questions: [
+              {
+                question: {
+                  field: "baseline",
+                  question: "Can you be more specific about your baseline?",
+                },
+                placeholder: "Example: I can run 3 km without stopping",
+                inputHint: "free_text",
+              },
+              {
+                question: {
+                  field: "goal",
+                  question: "What specific goal do you want to reach?",
+                },
+                placeholder: "Example: Run a 10k race",
+                inputHint: "free_text",
+              },
+            ],
           }),
         }),
       } as never,
@@ -41,15 +53,26 @@ describe("createPlannerPreparationWorkflow", () => {
 
     expect(result.accepted).toBeNull();
     expect(result.waiting).toEqual({
-      question: {
-        stage: "preparation",
-        question: {
-          field: "baseline",
-          question: "Can you be more specific about your baseline?",
+      questions: [
+        {
+          stage: "preparation",
+          question: {
+            field: "baseline",
+            question: "Can you be more specific about your baseline?",
+          },
+          placeholder: "Example: I can run 3 km without stopping",
+          inputHint: "free_text",
         },
-        placeholder: "Example: I can run 3 km without stopping",
-        inputHint: "free_text",
-      },
+        {
+          stage: "preparation",
+          question: {
+            field: "goal",
+            question: "What specific goal do you want to reach?",
+          },
+          placeholder: "Example: Run a 10k race",
+          inputHint: "free_text",
+        },
+      ],
     });
   });
 
@@ -76,10 +99,12 @@ describe("createPlannerPreparationWorkflow", () => {
     await workflow.invoke(
       createState({
         input: "I can run 3km without stopping",
-        questionAnswer: {
-          field: "baseline",
-          answer: "I can run 3km without stopping",
-        },
+        questionAnswers: [
+          {
+            field: "baseline",
+            answer: "I can run 3km without stopping",
+          },
+        ],
       }),
     );
 

@@ -52,15 +52,17 @@ describe("agent worker", () => {
         jobType: "message",
         threadId: "thread-1",
         stage: "intake",
-        question: {
-          stage: "intake",
-          question: {
-            field: "daysWeeklyFrequency",
-            question: "How many days per week can you work on this?",
+        questions: [
+          {
+            stage: "intake",
+            question: {
+              field: "daysWeeklyFrequency",
+              question: "How many days per week can you work on this?",
+            },
+            placeholder: "Example: 3 days per week",
+            inputHint: "days_per_week",
           },
-          placeholder: "Example: 3 days per week",
-          inputHint: "days_per_week",
-        },
+        ],
       },
       {
         type: "result",
@@ -71,15 +73,17 @@ describe("agent worker", () => {
           threadId: "thread-1",
           routedIntent: "plan_goal",
           response: "How many days per week can you work on this?",
-          plannerQuestion: {
-            stage: "intake",
-            question: {
-              field: "daysWeeklyFrequency",
-              question: "How many days per week can you work on this?",
+          plannerQuestions: [
+            {
+              stage: "intake",
+              question: {
+                field: "daysWeeklyFrequency",
+                question: "How many days per week can you work on this?",
+              },
+              placeholder: "Example: 3 days per week",
+              inputHint: "days_per_week",
             },
-            placeholder: "Example: 3 days per week",
-            inputHint: "days_per_week",
-          },
+          ],
         },
       },
     ];
@@ -93,10 +97,12 @@ describe("agent worker", () => {
           threadId: "thread-1",
           timezone: "Europe/Prague",
           message: "help me plan",
-          questionAnswer: {
-            field: "goal",
-            answer: "help me plan",
-          },
+          questionAnswers: [
+            {
+              field: "goal",
+              answer: "help me plan",
+            },
+          ],
         },
       } as unknown as Job,
       {
@@ -114,10 +120,12 @@ describe("agent worker", () => {
     expect(runMessageStream).toHaveBeenCalledWith("user-1", "job-1", {
       threadId: "thread-1",
       message: "help me plan",
-      questionAnswer: {
-        field: "goal",
-        answer: "help me plan",
-      },
+      questionAnswers: [
+        {
+          field: "goal",
+          answer: "help me plan",
+        },
+      ],
       timezone: "Europe/Prague",
     });
 
@@ -137,15 +145,17 @@ describe("agent worker", () => {
         threadId: "thread-1",
         routedIntent: "plan_goal",
         response: "How many days per week can you work on this?",
-        plannerQuestion: {
-          stage: "intake",
-          question: {
-            field: "daysWeeklyFrequency",
-            question: "How many days per week can you work on this?",
+        plannerQuestions: [
+          {
+            stage: "intake",
+            question: {
+              field: "daysWeeklyFrequency",
+              question: "How many days per week can you work on this?",
+            },
+            placeholder: "Example: 3 days per week",
+            inputHint: "days_per_week",
           },
-          placeholder: "Example: 3 days per week",
-          inputHint: "days_per_week",
-        },
+        ],
       },
     });
     expect(publishAgentEvent).toHaveBeenLastCalledWith({
@@ -178,10 +188,12 @@ describe("agent worker", () => {
             threadId: "thread-1",
             timezone: "Europe/Prague",
             message: "three days a week",
-            questionAnswer: {
-              field: "daysWeeklyFrequency",
-              answer: "three days a week",
-            },
+            questionAnswers: [
+              {
+                field: "daysWeeklyFrequency",
+                answer: "three days a week",
+              },
+            ],
           },
         } as unknown as Job,
         {
@@ -200,10 +212,12 @@ describe("agent worker", () => {
     expect(continuePlanStream).toHaveBeenCalledWith("user-1", "job-2", {
       threadId: "thread-1",
       message: "three days a week",
-      questionAnswer: {
-        field: "daysWeeklyFrequency",
-        answer: "three days a week",
-      },
+      questionAnswers: [
+        {
+          field: "daysWeeklyFrequency",
+          answer: "three days a week",
+        },
+      ],
       timezone: "Europe/Prague",
     });
 
