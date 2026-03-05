@@ -195,12 +195,18 @@ const hasCompletePreparationAccepted = (
   hasNonEmptyString(preparationAccepted.startDate) &&
   hasNonEmptyString(preparationAccepted.dueDate) &&
   hasValidDaysWeeklyFrequency(preparationAccepted.daysWeeklyFrequency) &&
-  typeof preparationAccepted.goalDerivedValue === "number" &&
-  Number.isFinite(preparationAccepted.goalDerivedValue) &&
-  typeof preparationAccepted.baselineDerivedValue === "number" &&
-  Number.isFinite(preparationAccepted.baselineDerivedValue) &&
-  typeof preparationAccepted.goalBaselineGap === "number" &&
-  Number.isFinite(preparationAccepted.goalBaselineGap);
+  typeof preparationAccepted.goalAssumedValue === "number" &&
+  Number.isFinite(preparationAccepted.goalAssumedValue) &&
+  typeof preparationAccepted.baselineAssumedValue === "number" &&
+  Number.isFinite(preparationAccepted.baselineAssumedValue) &&
+  typeof preparationAccepted.gap === "number" &&
+  Number.isFinite(preparationAccepted.gap) &&
+  typeof preparationAccepted.timeFrame === "number" &&
+  Number.isFinite(preparationAccepted.timeFrame) &&
+  typeof preparationAccepted.availableDays === "number" &&
+  Number.isFinite(preparationAccepted.availableDays) &&
+  typeof preparationAccepted.gapClosingFrequency === "number" &&
+  Number.isFinite(preparationAccepted.gapClosingFrequency);
 
 const runIntake = async (
   state: PlannerWorkflowState,

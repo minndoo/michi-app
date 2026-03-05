@@ -90,7 +90,6 @@ export class AgentController extends Controller {
     @Request() request: ExpressRequest,
     @Body() body: AgentMessageInput,
   ): Promise<AgentEnqueueResponse> {
-    console.log("API message", body);
     return this.enqueueJob(request, "message", body);
   }
 
@@ -109,7 +108,6 @@ export class AgentController extends Controller {
     @Request() request: ExpressRequest,
     @Body() body: AgentMessageInput,
   ): Promise<AgentEnqueueResponse> {
-    console.log("API plan goal", body);
     return this.enqueueJob(request, "plan_goal", body);
   }
 

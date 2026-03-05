@@ -72,11 +72,7 @@ const buildPrompt = (state: PlannerIntakeWorkflowState): string => {
   const userDefinedFields = getUserDefinedFields(state);
 
   return `
-You are extracting planner intake fields from a planning conversation.
-
-This turn is one of two modes:
-1. an initial planning request containing multiple fields
-2. follow-up answers to one or more planner questions about missing fields
+Extract planner intake fields.
 
 alreadyAcceptedFields:
 ${JSON.stringify(alreadyAcceptedFields, null, 2)}
@@ -93,7 +89,7 @@ ${state.input}
 Reference date: ${state.referenceDate}
 Timezone: ${state.timezone}
 
-Allowed fields only:
+Allowed output fields:
 - goal
 - baseline
 - startDate
@@ -102,49 +98,21 @@ Allowed fields only:
 - relativeDueDate
 - daysWeeklyFrequency
 
-How to use context:
-- alreadyAcceptedFields are context only.
-- Never modify, restate, correct, or reinterpret alreadyAcceptedFields.
-- Missing fields are extraction priority only. They are not proof that the latest user input answers them.
-- userDefinedFields are user-provided field answers and part of the same message context as latestUserInput.
-- Use both latestUserInput and userDefinedFields as extraction sources for this turn.
+Rules (strict):
+1. Process fields in this order: goal, baseline, startDate/relativeStartDate, dueDate/relativeDueDate, daysWeeklyFrequency.
+2. Never modify alreadyAcceptedFields. Only extract missing fields.
+3. If userDefinedFields has a concrete value for a missing field, extract it first.
+4. Treat userDefinedFields key as field intent.
+5. For date keys: use relativeStartDate/relativeDueDate for relative phrases ("today", "tomorrow", "next week", "in N days", "in N weeks"). Use startDate/dueDate for exact dates like YYYY-MM-DD.
+6. If value is vague ("not sure", "maybe", "sometime soon", "sometimes"), skip that field.
+7. Never set both startDate and relativeStartDate. Never set both dueDate and relativeDueDate.
+8. Return only JSON: { "extracted": { ... } }.
 
-Decision rules and precedence:
-1. Extract zero to many fields independently in one turn.
-2. For each field independently, extract only when value is clearly answered by latestUserInput and/or userDefinedFields.
-3. If a field is unclear or ambiguous, omit that field only; keep any other clear field extractions.
-4. Never overwrite alreadyAcceptedFields.
-5. Both exact calendar dates and relative date phrases are valid date answers.
-6. Relative phrases like "today", "tomorrow", "next week", "in 6 weeks", and "in 10 days" may map to relativeStartDate/relativeDueDate.
-7. Explicit calendar dates like "2026-03-12" or "2026-04-20" may map to startDate/dueDate.
-
-Short-answer rules:
-- Short fragment answers are expected in follow-up turns.
-- Examples of short fragments: "run 1km", "tomorrow", "in 6 weeks", "3 days".
-- If userDefinedFields.baseline is "run 1km", interpret it as baseline if that is a reasonable fit.
-- If userDefinedFields.startDate is "tomorrow", extract relativeStartDate.
-- If userDefinedFields.dueDate is "in 6 weeks", extract relativeDueDate.
-- If userDefinedFields.daysWeeklyFrequency is "3 days", extract daysWeeklyFrequency = 3.
-- If a short fragment could fit multiple supported fields and no field-targeting signal exists, omit that ambiguous field.
-
-Do not extract:
-- If latestUserInput and userDefinedFields are both ambiguous, vague, unrelated, or unsupported, return extracted: {}.
-- If you do not clearly understand a value, do not extract it.
-- Do not guess baseline, cadence, or dates.
-- Do not convert vague phrasing into numeric cadence unless it is directly supported.
-- Do not normalize dates.
-- Do not evaluate feasibility.
-- Do not derive preparedness values.
-- Do not ask preparation-style clarifications.
-- If a date phrase is vague (for example "sometime soon"), omit that date field instead of guessing.
-- Never set both startDate and relativeStartDate.
-- Never set both dueDate and relativeDueDate.
-
-Negative examples:
-- Missing fields: ["goal", "baseline"]
-- userDefinedFields: {}
-- latestUserInput: "run 1km"
-- Output: { "extracted": {} }
+Examples:
+- Missing fields: ["startDate", "dueDate"]
+- userDefinedFields: { "startDate": "tomorrow", "dueDate": "in 6 weeks" }
+- latestUserInput: "tomorrow and in 6 weeks"
+- Output: { "extracted": { "relativeStartDate": "tomorrow", "relativeDueDate": "in 6 weeks" } }
 
 - Missing fields: ["baseline"]
 - userDefinedFields: { "baseline": "not sure" }
@@ -152,54 +120,9 @@ Negative examples:
 - Output: { "extracted": {} }
 
 - Missing fields: ["daysWeeklyFrequency"]
-- userDefinedFields: { "daysWeeklyFrequency": "sometimes" }
-- latestUserInput: "sometimes"
-- Output: { "extracted": {} }
-
-- Missing fields: ["startDate"]
-- userDefinedFields: { "startDate": "sometime soon" }
-- latestUserInput: "sometime soon"
-- Output: { "extracted": {} }
-
-Positive examples:
-- alreadyAcceptedFields: { "goal": "Run a 10k" }
-- Missing fields: ["baseline"]
-- userDefinedFields: { "baseline": "run 1km" }
-- latestUserInput: "run 1km"
-- Output: { "extracted": { "baseline": "run 1km" } }
-
-- userDefinedFields: { "startDate": "tomorrow" }
-- latestUserInput: "tomorrow"
-- Output: { "extracted": { "relativeStartDate": "tomorrow" } }
-
-- userDefinedFields: { "dueDate": "in 6 weeks" }
-- latestUserInput: "in 6 weeks"
-- Output: { "extracted": { "relativeDueDate": "in 6 weeks" } }
-
-- userDefinedFields: { "startDate": "next week" }
-- latestUserInput: "next week"
-- Output: { "extracted": { "relativeStartDate": "next week" } }
-
-- userDefinedFields: { "startDate": "2026-03-12" }
-- latestUserInput: "2026-03-12"
-- Output: { "extracted": { "startDate": "2026-03-12" } }
-
-- userDefinedFields: { "dueDate": "2026-04-20" }
-- latestUserInput: "2026-04-20"
-- Output: { "extracted": { "dueDate": "2026-04-20" } }
-
-- userDefinedFields: { "daysWeeklyFrequency": "3 days" }
+- userDefinedFields: { "daysWeeklyFrequency": "3 days per week" }
 - latestUserInput: "3 days"
 - Output: { "extracted": { "daysWeeklyFrequency": 3 } }
-
-- Missing fields: ["baseline", "daysWeeklyFrequency"]
-- userDefinedFields: { "baseline": "can run 3km", "daysWeeklyFrequency": "3 days per week" }
-- latestUserInput: "I can run 3km and train 3 days weekly"
-- Output: { "extracted": { "baseline": "can run 3km", "daysWeeklyFrequency": 3 } }
-
-Return JSON with:
-- extracted: object containing only supported fields clearly answered by latestUserInput and/or userDefinedFields
-- If no supported field is clearly answered, return extracted: {}
 `;
 };
 

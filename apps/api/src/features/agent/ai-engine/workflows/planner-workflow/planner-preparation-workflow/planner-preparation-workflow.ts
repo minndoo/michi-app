@@ -57,6 +57,34 @@ const addDays = (isoDate: string, days: number): string => {
   return date.toISOString();
 };
 
+const computeMetrics = ({
+  goalAssumedValue,
+  baselineAssumedValue,
+  startDate,
+  dueDate,
+  daysWeeklyFrequency,
+}: {
+  goalAssumedValue: number;
+  baselineAssumedValue: number;
+  startDate: string;
+  dueDate: string;
+  daysWeeklyFrequency: number;
+}) => {
+  const gap = goalAssumedValue - baselineAssumedValue;
+  const timeFrame = Math.floor(
+    (new Date(dueDate).getTime() - new Date(startDate).getTime()) / 86400000,
+  );
+  const availableDays = Math.floor((timeFrame / 7) * daysWeeklyFrequency);
+
+  return {
+    gap,
+    timeFrame,
+    availableDays,
+    gapClosingFrequency:
+      availableDays > 0 ? Math.floor(gap / availableDays) : null,
+  };
+};
+
 const buildPrompt = (state: PlannerPreparationWorkflowState): string => {
   const clarification = state.questionAnswers?.length
     ? createClarification(state.questionAnswers)
@@ -82,6 +110,12 @@ ${clarification}
 - accepted normalized planning input
 - waiting with one or more question objects under questions[] containing question.field, question.question, placeholder, and inputHint
 Ask clarification questions when input remains ambiguous.
+For accepted output:
+- Quantify goalAssumedValue on a 1-100 scale.
+- Quantify baselineAssumedValue on a 1-100 scale.
+- If either value is ambiguous and cannot be confidently quantified, return waiting.
+- Resolve relative date expressions from intake using referenceDate.
+- Keep startDate and dueDate as normalized ISO datetime strings.
 `;
 };
 
@@ -91,6 +125,13 @@ const fallbackAccepted = (
   const startDate = state.intakeAccepted.startDate ?? state.referenceDate;
   const dueDate =
     state.intakeAccepted.dueDate ?? addDays(state.referenceDate, 30);
+  const metrics = computeMetrics({
+    goalAssumedValue: 70,
+    baselineAssumedValue: 30,
+    startDate,
+    dueDate,
+    daysWeeklyFrequency: state.intakeAccepted.daysWeeklyFrequency,
+  });
 
   return {
     goal: state.intakeAccepted.goal,
@@ -98,9 +139,12 @@ const fallbackAccepted = (
     startDate,
     dueDate,
     daysWeeklyFrequency: state.intakeAccepted.daysWeeklyFrequency,
-    goalDerivedValue: 70,
-    baselineDerivedValue: 30,
-    goalBaselineGap: 40,
+    goalAssumedValue: 70,
+    baselineAssumedValue: 30,
+    gap: metrics.gap,
+    timeFrame: metrics.timeFrame,
+    availableDays: metrics.availableDays,
+    gapClosingFrequency: metrics.gapClosingFrequency ?? 0,
   };
 };
 
@@ -127,6 +171,34 @@ const llmCallPlannerPreparation = async (
       };
     }
 
+    const metrics = computeMetrics({
+      goalAssumedValue: response.goalAssumedValue,
+      baselineAssumedValue: response.baselineAssumedValue,
+      startDate: response.startDate,
+      dueDate: response.dueDate,
+      daysWeeklyFrequency: response.daysWeeklyFrequency,
+    });
+
+    if (metrics.availableDays <= 0 || metrics.gapClosingFrequency == null) {
+      return {
+        accepted: null,
+        waiting: {
+          questions: [
+            {
+              stage: "preparation",
+              question: {
+                field: "dueDate",
+                question:
+                  "Your current timeframe does not include any available working days. Please adjust due date and/or days per week.",
+              },
+              placeholder: "Example: due in 8 weeks and 3 days per week",
+              inputHint: "free_text",
+            },
+          ],
+        },
+      };
+    }
+
     return {
       accepted: {
         goal: response.goal,
@@ -134,9 +206,12 @@ const llmCallPlannerPreparation = async (
         startDate: response.startDate,
         dueDate: response.dueDate,
         daysWeeklyFrequency: response.daysWeeklyFrequency,
-        goalDerivedValue: response.goalDerivedValue,
-        baselineDerivedValue: response.baselineDerivedValue,
-        goalBaselineGap: response.goalBaselineGap,
+        goalAssumedValue: response.goalAssumedValue,
+        baselineAssumedValue: response.baselineAssumedValue,
+        gap: metrics.gap,
+        timeFrame: metrics.timeFrame,
+        availableDays: metrics.availableDays,
+        gapClosingFrequency: metrics.gapClosingFrequency,
       },
       waiting: null,
     };

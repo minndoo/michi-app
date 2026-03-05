@@ -12,9 +12,8 @@ export const preparationAcceptedSchema = z.discriminatedUnion("status", [
     startDate: z.string(),
     dueDate: z.string(),
     daysWeeklyFrequency: z.number().int().min(1).max(7),
-    goalDerivedValue: z.number().min(1).max(100),
-    baselineDerivedValue: z.number().min(1).max(100),
-    goalBaselineGap: z.number().min(0).max(100),
+    goalAssumedValue: z.number().min(1).max(100),
+    baselineAssumedValue: z.number().min(1).max(100),
   }),
   z.object({
     status: z.literal("waiting"),

@@ -247,9 +247,12 @@ export interface PlanPreparationAccepted {
   startDate: string;
   dueDate: string;
   daysWeeklyFrequency: number;
-  goalDerivedValue: number;
-  baselineDerivedValue: number;
-  goalBaselineGap: number;
+  goalAssumedValue: number;
+  baselineAssumedValue: number;
+  gap: number;
+  timeFrame: number;
+  availableDays: number;
+  gapClosingFrequency: number;
 }
 
 export interface PlanPreparationWaiting {

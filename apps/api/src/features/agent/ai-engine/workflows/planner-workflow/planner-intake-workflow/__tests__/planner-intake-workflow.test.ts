@@ -258,32 +258,32 @@ describe("createPlannerIntakeWorkflow", () => {
     );
     expect(invoke).toHaveBeenCalledWith(
       expect.stringContaining(
-        "Extract zero to many fields independently in one turn.",
+        "Process fields in this order: goal, baseline, startDate/relativeStartDate, dueDate/relativeDueDate, daysWeeklyFrequency.",
       ),
     );
     expect(invoke).toHaveBeenCalledWith(
       expect.stringContaining(
-        'Relative phrases like "today", "tomorrow", "next week", "in 6 weeks", and "in 10 days" may map to relativeStartDate/relativeDueDate.',
+        "If userDefinedFields has a concrete value for a missing field, extract it first.",
       ),
     );
     expect(invoke).toHaveBeenCalledWith(
       expect.stringContaining(
-        'Explicit calendar dates like "2026-03-12" or "2026-04-20" may map to startDate/dueDate.',
+        'For date keys: use relativeStartDate/relativeDueDate for relative phrases ("today", "tomorrow", "next week", "in N days", "in N weeks"). Use startDate/dueDate for exact dates like YYYY-MM-DD.',
       ),
     );
     expect(invoke).toHaveBeenCalledWith(
       expect.stringContaining(
-        '- userDefinedFields: { "startDate": "next week" }\n- latestUserInput: "next week"\n- Output: { "extracted": { "relativeStartDate": "next week" } }',
+        '- Missing fields: ["startDate", "dueDate"]\n- userDefinedFields: { "startDate": "tomorrow", "dueDate": "in 6 weeks" }\n- latestUserInput: "tomorrow and in 6 weeks"\n- Output: { "extracted": { "relativeStartDate": "tomorrow", "relativeDueDate": "in 6 weeks" } }',
       ),
     );
     expect(invoke).toHaveBeenCalledWith(
       expect.stringContaining(
-        '- userDefinedFields: { "startDate": "2026-03-12" }\n- latestUserInput: "2026-03-12"\n- Output: { "extracted": { "startDate": "2026-03-12" } }',
+        '- Missing fields: ["baseline"]\n- userDefinedFields: { "baseline": "not sure" }\n- latestUserInput: "not sure"\n- Output: { "extracted": {} }',
       ),
     );
     expect(invoke).toHaveBeenCalledWith(
       expect.stringContaining(
-        '- userDefinedFields: { "startDate": "sometime soon" }\n- latestUserInput: "sometime soon"\n- Output: { "extracted": {} }',
+        '- Missing fields: ["daysWeeklyFrequency"]\n- userDefinedFields: { "daysWeeklyFrequency": "3 days per week" }\n- latestUserInput: "3 days"\n- Output: { "extracted": { "daysWeeklyFrequency": 3 } }',
       ),
     );
   });
