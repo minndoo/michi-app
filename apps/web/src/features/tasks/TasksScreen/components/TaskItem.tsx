@@ -17,7 +17,7 @@ export const TaskItem = ({ task, isCompleting, onComplete }: TaskItemProps) => {
       bg="$color4"
       rounded="$10"
       borderWidth={1}
-      borderColor="$borderColor"
+      borderColor="$color5"
       p="$4"
       gap="$6"
     >
@@ -27,28 +27,28 @@ export const TaskItem = ({ task, isCompleting, onComplete }: TaskItemProps) => {
             minW={56}
             minH={56}
             rounded={28}
-            bg="$white2"
+            bg="$white1"
             items="center"
             justify="center"
           >
             {task.status === "DONE" ? (
-              <Check color="$color5" size={26} />
+              <Check color="$color9" size={26} />
             ) : (
-              <BookOpenText color="$color5" size={26} />
+              <BookOpenText color="$color9" size={26} />
             )}
           </View>
           <YStack gap="$1" flex={1}>
-            <H5 color="$color11" fontWeight="normal">
+            <H5 color="$color12" fontWeight="normal">
               {task.title}
             </H5>
-            <Text color="$color8" fontSize="$3" lineHeight="$3">
+            <Text color="$color11" fontSize="$3" lineHeight="$3">
               {task.description || "No description"}
             </Text>
           </YStack>
         </XStack>
-        <View bg="$white2" rounded="$7" px="$3" py="$1.5">
+        <View bg="$white1" rounded="$7" px="$3" py="$1.5">
           <Text
-            color="$color8"
+            color="$color10"
             fontSize="$2"
             lineHeight="$2"
             fontWeight="bold"
@@ -61,12 +61,8 @@ export const TaskItem = ({ task, isCompleting, onComplete }: TaskItemProps) => {
       <XStack gap="$2">
         {task.status !== "DONE" ? (
           <Button
-            flex={1}
+            grow={1}
             variant="outlined"
-            bg="$white"
-            hoverStyle={{
-              bg: "$white",
-            }}
             disabled={isCompleting}
             onPress={() => onComplete(task.id)}
             gap="$2"
@@ -83,13 +79,14 @@ export const TaskItem = ({ task, isCompleting, onComplete }: TaskItemProps) => {
         ) : null}
         <LinkButton
           href={`/tasks/${task.id}`}
-          style={{ flex: 1 }}
+          style={{ flexGrow: 1 }}
           buttonProps={{
             variant: "outlined",
-            flex: 1,
+            borderColor: "$color6",
+            bg: "transparent",
           }}
         >
-          <Text color="inherit">View Details</Text>
+          <Text color="$color11">View Details</Text>
         </LinkButton>
       </XStack>
     </YStack>

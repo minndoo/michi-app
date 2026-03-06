@@ -10,6 +10,13 @@ If this file conflicts with ai/tamagui.prompt.md, ai/tamagui.prompt.md is canoni
 
 - Never hardcode hex colors in components.
 - Always access theme values with $
+- 12-step color scale convention:
+  - $color1-4: backgrounds (subtle to emphasized)
+  - $color5-6: borders and separators
+  - $color7-8: interactive states (hover/active)
+  - $color9-10: solid/accent backgrounds
+  - $color11-12: text (low to high contrast)
+- When mapping designs/screenshots, assign colors by role into this scale first, then use only $color\* tokens in components (no hex values).
 
 ## Component rules
 

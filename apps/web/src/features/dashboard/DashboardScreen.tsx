@@ -105,27 +105,27 @@ export const DashboardScreen = () => {
   return (
     <YStack gap="$3">
       <YStack gap="$1.5" py="$2">
-        <H2 color="$color11" fontWeight="700">
+        <H2 color="$color12" fontWeight="700">
           Good Morning, Sarah
         </H2>
-        <Text color="$color8">Here&apos;s to a positive day ahead.</Text>
+        <Text color="$color11">Here&apos;s to a positive day ahead.</Text>
       </YStack>
       <View
-        bg="$white3"
+        bg="$color4"
         rounded="$radius.6"
         p="$5"
         borderWidth={1}
-        borderColor="$borderColor"
+        borderColor="$color5"
       >
         <XStack justify="space-between" items="center" mb="$2">
-          <Text color="$color8" fontWeight="600" letterSpacing={1}>
+          <Text color="$color10" fontWeight="600" letterSpacing={1}>
             TODAY&apos;S FOCUS
           </Text>
-          <ChevronRight size={28} color="$outlineColor" />
+          <ChevronRight size={28} color="$color10" />
         </XStack>
         <YStack gap="$1">
-          <H2 color="$color11">Mindful Morning Routine</H2>
-          <Text color="$color8">Take 10 minutes for a mindful start.</Text>
+          <H2 color="$color12">Mindful Morning Routine</H2>
+          <Text color="$color11">Take 10 minutes for a mindful start.</Text>
         </YStack>
       </View>
 
@@ -135,15 +135,15 @@ export const DashboardScreen = () => {
         contentGap="$3"
       >
         {tasksLoading ? (
-          <Text color="$color8">Loading tasks...</Text>
+          <Text color="$color11">Loading tasks...</Text>
         ) : tasksError ? (
-          <Text color="$color8">
+          <Text color="$color11">
             {tasksErrorDetails instanceof Error
               ? tasksErrorDetails.message
               : "Failed to load tasks"}
           </Text>
         ) : tasks.length === 0 ? (
-          <Text color="$color8">No tasks found.</Text>
+          <Text color="$color11">No tasks found.</Text>
         ) : (
           <YStack gap="$3">
             {tasks.slice(0, 4).map((task) => {
@@ -158,7 +158,7 @@ export const DashboardScreen = () => {
                     onCheckedChange={() => handleToggleTask(task)}
                   />
                   <Text
-                    color={task.status === "DONE" ? "$color5" : "$color11"}
+                    color={task.status === "DONE" ? "$color11" : "$color12"}
                     textDecorationLine={
                       task.status === "DONE" ? "line-through" : "none"
                     }
@@ -178,15 +178,15 @@ export const DashboardScreen = () => {
         viewAllAction={{ href: "/goals", actionLabel: "View All" }}
       >
         {goalsLoading ? (
-          <Text color="$color8">Loading goals...</Text>
+          <Text color="$color11">Loading goals...</Text>
         ) : goalsError ? (
-          <Text color="$color8">
+          <Text color="$color11">
             {goalsErrorDetails instanceof Error
               ? goalsErrorDetails.message
               : "Failed to load goals"}
           </Text>
         ) : goalsProgress.length === 0 ? (
-          <Text color="$color8">No goals found.</Text>
+          <Text color="$color11">No goals found.</Text>
         ) : (
           <YStack gap="$4">
             {goalsProgress.map(
@@ -194,15 +194,15 @@ export const DashboardScreen = () => {
                 <YStack key={id} gap="$1.5">
                   <XStack justify="space-between" items="center">
                     <XStack items="center" gap="$2">
-                      <Icon size={30} color="$outlineColor" />
-                      <Text color="$color11">{title}</Text>
+                      <Icon size={30} color="$color9" />
+                      <Text color="$color12">{title}</Text>
                     </XStack>
-                    <Text color="$color8">{progress}%</Text>
+                    <Text color="$color11">{progress}%</Text>
                   </XStack>
-                  <Progress value={progress} max={100} size="$2" bg="$white3">
+                  <Progress value={progress} max={100} size="$2" bg="$color5">
                     <Progress.Indicator bg="$color9" />
                   </Progress>
-                  <Text color="$color8">{subtitle}</Text>
+                  <Text color="$color11">{subtitle}</Text>
                 </YStack>
               ),
             )}

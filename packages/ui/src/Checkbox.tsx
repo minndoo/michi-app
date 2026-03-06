@@ -20,10 +20,10 @@ export type CheckboxProps = BaseProps & CheckboxExtraProps;
 
 const CheckboxComponent = TamaguiCheckbox.styleable<CheckboxExtraProps>(
   ({ loading, bg, borderColor, checked, ...props }, ref) => {
-    const resolvedBackground = bg ?? (checked ? "$color8" : "$white0");
+    const resolvedBackground = bg ?? (checked ? "$color9" : "$white0");
 
     const resolvedBorderColor =
-      borderColor ?? (checked ? "$outlineColor" : "$borderColor");
+      borderColor ?? (checked ? "$color9" : "$color6");
 
     return (
       <CheckboxFrame

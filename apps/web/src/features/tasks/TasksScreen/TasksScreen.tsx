@@ -18,7 +18,7 @@ export const TasksScreen = () => {
   return (
     <YStack gap="$4" position="relative" pb="$12">
       <YStack py="$2">
-        <H1 color="$color8">My Tasks</H1>
+        <H1 color="$color10">My Tasks</H1>
       </YStack>
 
       <AppTabs tabs={tabs} tabsContent={tabsContent} />

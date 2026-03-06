@@ -53,11 +53,7 @@ export const AppTabs = <TTabs extends readonly string[]>({
       gap="$4"
     >
       <TamaguiTabs.List unstyled asChild aria-label="Tabs">
-        <XStack
-          alignItems="center"
-          borderBottomWidth={1}
-          borderColor="$borderColor"
-        >
+        <XStack alignItems="center" borderBottomWidth={1} borderColor="$color5">
           {tabs.map((tabKey) => {
             const key = tabKey as TabKey;
             const isActive = selectedValue === key;
@@ -65,13 +61,13 @@ export const AppTabs = <TTabs extends readonly string[]>({
               <TamaguiTabs.Tab key={key} value={key} asChild>
                 <YStack gap="$1" hoverStyle={{ cursor: "pointer" }}>
                   <Text
-                    color={isActive ? "$color10" : "$color8"}
-                    hoverStyle={{ color: "$color9" }}
+                    color={isActive ? "$color9" : "$color11"}
+                    hoverStyle={{ color: "$color10" }}
                   >
                     {tabsContent[key].tabTitle}
                   </Text>
                   <View
-                    background={isActive ? "$color10" : "transparent"}
+                    background={isActive ? "$color9" : "transparent"}
                     height="$0.25"
                     style={{
                       borderRadius: 7,

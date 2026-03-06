@@ -37,17 +37,17 @@ export const GoalsList = ({ status }: GoalsListProps) => {
           iconAfter={ChevronDown}
           borderRadius={9}
           borderWidth={1}
-          borderColor="$borderColor"
-          backgroundColor="$background"
+          borderColor="$color6"
+          backgroundColor="$white1"
           minW={120}
         >
           <Select.Value placeholder="Order" />
         </Select.Trigger>
         <Select.Content zIndex={200000}>
           <Select.Viewport
-            background="$background"
+            background="$white1"
             borderWidth={1}
-            borderColor="$borderColor"
+            borderColor="$color6"
             overflow="hidden"
             style={{ borderRadius: 9 }}
           >
@@ -57,7 +57,7 @@ export const GoalsList = ({ status }: GoalsListProps) => {
                 index={index}
                 value={option.value}
                 borderTopWidth={index === 0 ? 0 : 1}
-                borderColor="$borderColor"
+                borderColor="$color6"
                 style={{
                   paddingTop: 10,
                   paddingBottom: 10,
@@ -79,13 +79,13 @@ export const GoalsList = ({ status }: GoalsListProps) => {
       <YStack gap="$3" grow={1}>
         {orderSelect}
         <View
-          bg="$white3"
+          bg="$color4"
           rounded="$10"
           borderWidth={1}
-          borderColor="$borderColor"
+          borderColor="$color5"
           p="$4"
         >
-          <Text color="$color8">Loading goals...</Text>
+          <Text color="$color11">Loading goals...</Text>
         </View>
       </YStack>
     );
@@ -96,13 +96,13 @@ export const GoalsList = ({ status }: GoalsListProps) => {
       <YStack gap="$3" grow={1}>
         {orderSelect}
         <View
-          bg="$white3"
+          bg="$color4"
           rounded="$10"
           borderWidth={1}
-          borderColor="$borderColor"
+          borderColor="$color5"
           p="$4"
         >
-          <Text color="$color8">
+          <Text color="$color11">
             {error instanceof Error ? error.message : "Failed to load goals"}
           </Text>
         </View>
@@ -115,13 +115,13 @@ export const GoalsList = ({ status }: GoalsListProps) => {
       <YStack gap="$3" grow={1}>
         {orderSelect}
         <View
-          bg="$white3"
+          bg="$color4"
           rounded="$10"
           borderWidth={1}
-          borderColor="$borderColor"
+          borderColor="$color5"
           p="$4"
         >
-          <Text color="$color8">No goals found.</Text>
+          <Text color="$color11">No goals found.</Text>
         </View>
       </YStack>
     );

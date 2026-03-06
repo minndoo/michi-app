@@ -25,7 +25,7 @@ export const GoalsScreen = () => {
   return (
     <YStack gap="$4" position="relative" pb="$12">
       <YStack py="$2">
-        <H1 color="$color8">My Goals</H1>
+        <H1 color="$color10">My Goals</H1>
       </YStack>
 
       <AppTabs tabs={tabs} tabsContent={tabsContent} />

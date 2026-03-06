@@ -20,20 +20,20 @@ export const Section = ({
 }: SectionProps) => {
   return (
     <Card
-      bg="$white2"
+      bg="$white1"
       p="$5"
       rounded="$radius.6"
       borderWidth={1}
-      borderColor="$borderColor"
+      borderColor="$color5"
       gap="$5"
     >
       <Card.Header p="$0">
         <XStack justify="space-between" items="center" minW="100%">
-          <H3 color="$color11" fontWeight="bold">
+          <H3 color="$color12" fontWeight="bold">
             {title}
           </H3>
           <Link href={viewAllAction.href}>
-            <Text color="$color8" hoverStyle={{ color: "$color9" }}>
+            <Text color="$color10" hoverStyle={{ color: "$color9" }}>
               {viewAllAction.actionLabel}
             </Text>
           </Link>
