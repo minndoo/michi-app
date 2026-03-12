@@ -1,6 +1,7 @@
 import { auth0 } from "@/lib/auth0";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
+import { AuthedLayout as AppAuthedLayout } from "@/shared/ui/layouts/AuthedLayout";
 
 export default async function AuthedLayout({
   children,
@@ -14,10 +15,10 @@ export default async function AuthedLayout({
     // Get the current pathname to redirect back after login
     const headersList = await headers();
     const pathname = headersList.get("x-pathname") || "/dashboard";
-    
+
     // Redirect to login with returnTo parameter
     redirect(`/auth/login?returnTo=${encodeURIComponent(pathname)}`);
   }
 
-  return <div>{children}</div>;
+  return <AppAuthedLayout>{children}</AppAuthedLayout>;
 }
