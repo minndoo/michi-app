@@ -101,8 +101,8 @@ describe("agent stream planner intake contracts", () => {
             intakeAccepted: {
               goal: "Run a 10k",
               baseline: "Can run 3km",
-              relativeStartDate: "tomorrow",
-              relativeDueDate: "in a month",
+              startDate: "tomorrow",
+              dueDate: "in a month",
               daysWeeklyFrequency: 3,
             },
             plannerQuestions: null,

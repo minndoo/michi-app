@@ -227,9 +227,7 @@ export interface PlanIntakeAccepted {
   goal: string;
   baseline: string;
   startDate?: string;
-  relativeStartDate?: string;
   dueDate?: string;
-  relativeDueDate?: string;
   daysWeeklyFrequency: number;
 }
 

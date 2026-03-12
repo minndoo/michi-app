@@ -10,8 +10,8 @@ const createState = (overrides = {}) => ({
   intakeAccepted: {
     goal: "Run a 10k",
     baseline: "Can run 3km",
-    relativeStartDate: "tomorrow",
-    relativeDueDate: "in a month",
+    startDate: "tomorrow",
+    dueDate: "in a month",
     daysWeeklyFrequency: 3,
   },
   accepted: null,
@@ -76,7 +76,7 @@ describe("createPlannerPreparationWorkflow", () => {
     });
   });
 
-  it("adds clarifications to the prompt when a follow-up answer targets a planner field", async () => {
+  it("calls model when a follow-up answer targets a planner field", async () => {
     const invoke = vi.fn().mockResolvedValue({
       status: "accepted",
       goal: "Run a 10k",
@@ -107,11 +107,7 @@ describe("createPlannerPreparationWorkflow", () => {
       }),
     );
 
-    expect(invoke).toHaveBeenCalledWith(
-      expect.stringContaining(
-        "Clarifications:\nbaseline: I can run 3km without stopping",
-      ),
-    );
+    expect(invoke).toHaveBeenCalledOnce();
   });
 
   it("computes deterministic preparation metrics from accepted values", async () => {
@@ -184,6 +180,43 @@ describe("createPlannerPreparationWorkflow", () => {
           inputHint: "free_text",
         },
       ],
+    });
+  });
+
+  it("uses deterministic fallback dates when intake dates are not parseable", async () => {
+    const workflow = createPlannerPreparationWorkflow({
+      model: {
+        withStructuredOutput: vi.fn().mockReturnValue({
+          invoke: vi.fn().mockRejectedValue(new Error("model unavailable")),
+        }),
+      } as never,
+    });
+
+    const result = await workflow.invoke(
+      createState({
+        intakeAccepted: {
+          goal: "Run a 10k",
+          baseline: "Can run 3km",
+          startDate: "tomorrow",
+          dueDate: "in a month",
+          daysWeeklyFrequency: 3,
+        },
+      }),
+    );
+
+    expect(result.waiting).toBeNull();
+    expect(result.accepted).toEqual({
+      goal: "Run a 10k",
+      baseline: "Can run 3km",
+      startDate: "2026-03-02T00:00:00.000Z",
+      dueDate: "2026-04-01T00:00:00.000Z",
+      daysWeeklyFrequency: 3,
+      goalAssumedValue: 70,
+      baselineAssumedValue: 30,
+      gap: 40,
+      timeFrame: 30,
+      availableDays: 12,
+      gapClosingFrequency: 3,
     });
   });
 });

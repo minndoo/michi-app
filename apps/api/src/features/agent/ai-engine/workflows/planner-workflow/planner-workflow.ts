@@ -180,10 +180,8 @@ const hasCompleteIntakeAccepted = (
   intakeAccepted != null &&
   hasNonEmptyString(intakeAccepted.goal) &&
   hasNonEmptyString(intakeAccepted.baseline) &&
-  (hasNonEmptyString(intakeAccepted.startDate) ||
-    hasNonEmptyString(intakeAccepted.relativeStartDate)) &&
-  (hasNonEmptyString(intakeAccepted.dueDate) ||
-    hasNonEmptyString(intakeAccepted.relativeDueDate)) &&
+  hasNonEmptyString(intakeAccepted.startDate) &&
+  hasNonEmptyString(intakeAccepted.dueDate) &&
   hasValidDaysWeeklyFrequency(intakeAccepted.daysWeeklyFrequency);
 
 const hasCompletePreparationAccepted = (

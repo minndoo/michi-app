@@ -57,6 +57,14 @@ const addDays = (isoDate: string, days: number): string => {
   return date.toISOString();
 };
 
+const isValidDateString = (value: string | undefined): value is string => {
+  if (!value?.trim()) {
+    return false;
+  }
+
+  return !Number.isNaN(new Date(value).getTime());
+};
+
 const computeMetrics = ({
   goalAssumedValue,
   baselineAssumedValue,
@@ -122,9 +130,14 @@ For accepted output:
 const fallbackAccepted = (
   state: PlannerPreparationWorkflowState,
 ): PlanPreparationAccepted => {
-  const startDate = state.intakeAccepted.startDate ?? state.referenceDate;
-  const dueDate =
-    state.intakeAccepted.dueDate ?? addDays(state.referenceDate, 30);
+  const fallbackStartDate = state.referenceDate;
+  const fallbackDueDate = addDays(state.referenceDate, 30);
+  const startDate = isValidDateString(state.intakeAccepted.startDate)
+    ? state.intakeAccepted.startDate
+    : fallbackStartDate;
+  const dueDate = isValidDateString(state.intakeAccepted.dueDate)
+    ? state.intakeAccepted.dueDate
+    : fallbackDueDate;
   const metrics = computeMetrics({
     goalAssumedValue: 70,
     baselineAssumedValue: 30,

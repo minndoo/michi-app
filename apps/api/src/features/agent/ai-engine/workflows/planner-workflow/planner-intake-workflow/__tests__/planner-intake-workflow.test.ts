@@ -21,8 +21,8 @@ describe("createPlannerIntakeWorkflow", () => {
             extracted: {
               goal: "Run a 10k",
               baseline: "Can run 3km",
-              relativeStartDate: "tomorrow",
-              relativeDueDate: "in a month",
+              startDate: "tomorrow",
+              dueDate: "in a month",
             },
           }),
         }),
@@ -34,8 +34,8 @@ describe("createPlannerIntakeWorkflow", () => {
     expect(result.accepted).toEqual({
       goal: "Run a 10k",
       baseline: "Can run 3km",
-      relativeStartDate: "tomorrow",
-      relativeDueDate: "in a month",
+      startDate: "tomorrow",
+      dueDate: "in a month",
     });
     expect(result.waiting).toEqual({
       reason: "Missing required planning fields.",
@@ -73,8 +73,8 @@ describe("createPlannerIntakeWorkflow", () => {
         accepted: {
           goal: "Run a 10k",
           baseline: "Can run 3km",
-          relativeStartDate: "tomorrow",
-          relativeDueDate: "in a month",
+          startDate: "tomorrow",
+          dueDate: "in a month",
         },
       }),
     );
@@ -83,8 +83,8 @@ describe("createPlannerIntakeWorkflow", () => {
     expect(result.accepted).toEqual({
       goal: "Run a 10k",
       baseline: "Can run 3km",
-      relativeStartDate: "tomorrow",
-      relativeDueDate: "in a month",
+      startDate: "tomorrow",
+      dueDate: "in a month",
       daysWeeklyFrequency: 3,
     });
   });
@@ -108,8 +108,8 @@ describe("createPlannerIntakeWorkflow", () => {
         accepted: {
           goal: "Run a 10k",
           baseline: "Can run 3km",
-          relativeStartDate: "tomorrow",
-          relativeDueDate: "in a month",
+          startDate: "tomorrow",
+          dueDate: "in a month",
           daysWeeklyFrequency: 3,
         },
       }),
@@ -137,8 +137,8 @@ describe("createPlannerIntakeWorkflow", () => {
         input: "Not sure yet",
         accepted: {
           goal: "Run a 10k",
-          relativeStartDate: "tomorrow",
-          relativeDueDate: "in a month",
+          startDate: "tomorrow",
+          dueDate: "in a month",
           daysWeeklyFrequency: 3,
         },
       }),
@@ -146,8 +146,8 @@ describe("createPlannerIntakeWorkflow", () => {
 
     expect(result.accepted).toEqual({
       goal: "Run a 10k",
-      relativeStartDate: "tomorrow",
-      relativeDueDate: "in a month",
+      startDate: "tomorrow",
+      dueDate: "in a month",
       daysWeeklyFrequency: 3,
     });
     expect(result.waiting).toEqual({
@@ -186,8 +186,8 @@ describe("createPlannerIntakeWorkflow", () => {
         accepted: {
           goal: "Run a 10k",
           baseline: "Can run 3km",
-          relativeStartDate: "tomorrow",
-          relativeDueDate: "in a month",
+          startDate: "tomorrow",
+          dueDate: "in a month",
           daysWeeklyFrequency: 3,
         },
       }),
@@ -197,13 +197,13 @@ describe("createPlannerIntakeWorkflow", () => {
     expect(result.accepted).toEqual({
       goal: "Run a 10k",
       baseline: "Can run 3km",
-      relativeStartDate: "tomorrow",
-      relativeDueDate: "in a month",
+      startDate: "tomorrow",
+      dueDate: "in a month",
       daysWeeklyFrequency: 3,
     });
   });
 
-  it("builds prompt with alreadyAcceptedFields and mapped userDefinedFields", async () => {
+  it("calls model once when question answers are provided", async () => {
     const invoke = vi.fn().mockResolvedValue({
       extracted: {
         baseline: "Can run 3km",
@@ -222,8 +222,8 @@ describe("createPlannerIntakeWorkflow", () => {
         input: "I can run 3km",
         accepted: {
           goal: "Run a 10k",
-          relativeStartDate: "tomorrow",
-          relativeDueDate: "in a month",
+          startDate: "tomorrow",
+          dueDate: "in a month",
         },
         questionAnswers: [
           {
@@ -243,49 +243,6 @@ describe("createPlannerIntakeWorkflow", () => {
     );
 
     expect(invoke).toHaveBeenCalledOnce();
-    expect(invoke).toHaveBeenCalledWith(
-      expect.stringContaining(
-        'alreadyAcceptedFields:\n{\n  "goal": "Run a 10k",',
-      ),
-    );
-    expect(invoke).toHaveBeenCalledWith(
-      expect.stringContaining(
-        'userDefinedFields:\n{\n  "baseline": "Can run 3km"\n}',
-      ),
-    );
-    expect(invoke).toHaveBeenCalledWith(
-      expect.stringContaining("latestUserInput:\nI can run 3km"),
-    );
-    expect(invoke).toHaveBeenCalledWith(
-      expect.stringContaining(
-        "Process fields in this order: goal, baseline, startDate/relativeStartDate, dueDate/relativeDueDate, daysWeeklyFrequency.",
-      ),
-    );
-    expect(invoke).toHaveBeenCalledWith(
-      expect.stringContaining(
-        "If userDefinedFields has a concrete value for a missing field, extract it first.",
-      ),
-    );
-    expect(invoke).toHaveBeenCalledWith(
-      expect.stringContaining(
-        'For date keys: use relativeStartDate/relativeDueDate for relative phrases ("today", "tomorrow", "next week", "in N days", "in N weeks"). Use startDate/dueDate for exact dates like YYYY-MM-DD.',
-      ),
-    );
-    expect(invoke).toHaveBeenCalledWith(
-      expect.stringContaining(
-        '- Missing fields: ["startDate", "dueDate"]\n- userDefinedFields: { "startDate": "tomorrow", "dueDate": "in 6 weeks" }\n- latestUserInput: "tomorrow and in 6 weeks"\n- Output: { "extracted": { "relativeStartDate": "tomorrow", "relativeDueDate": "in 6 weeks" } }',
-      ),
-    );
-    expect(invoke).toHaveBeenCalledWith(
-      expect.stringContaining(
-        '- Missing fields: ["baseline"]\n- userDefinedFields: { "baseline": "not sure" }\n- latestUserInput: "not sure"\n- Output: { "extracted": {} }',
-      ),
-    );
-    expect(invoke).toHaveBeenCalledWith(
-      expect.stringContaining(
-        '- Missing fields: ["daysWeeklyFrequency"]\n- userDefinedFields: { "daysWeeklyFrequency": "3 days per week" }\n- latestUserInput: "3 days"\n- Output: { "extracted": { "daysWeeklyFrequency": 3 } }',
-      ),
-    );
   });
 
   it("calls model for multi-field clarification turns and keeps unresolved fields waiting", async () => {
@@ -307,8 +264,8 @@ describe("createPlannerIntakeWorkflow", () => {
         input: "Can run 3km",
         accepted: {
           goal: "Run a 10k",
-          relativeStartDate: "tomorrow",
-          relativeDueDate: "in 6 weeks",
+          startDate: "tomorrow",
+          dueDate: "in 6 weeks",
         },
         questionAnswers: [
           {
@@ -327,8 +284,8 @@ describe("createPlannerIntakeWorkflow", () => {
     expect(result.accepted).toEqual({
       goal: "Run a 10k",
       baseline: "Can run 3km",
-      relativeStartDate: "tomorrow",
-      relativeDueDate: "in 6 weeks",
+      startDate: "tomorrow",
+      dueDate: "in 6 weeks",
     });
     expect(result.waiting).toEqual({
       reason: "Missing required planning fields.",
@@ -353,8 +310,8 @@ describe("createPlannerIntakeWorkflow", () => {
         withStructuredOutput: vi.fn().mockReturnValue({
           invoke: vi.fn().mockResolvedValue({
             extracted: {
-              relativeStartDate: "next week",
-              relativeDueDate: "in 6 weeks",
+              startDate: "next week",
+              dueDate: "in 6 weeks",
             },
           }),
         }),
@@ -376,8 +333,8 @@ describe("createPlannerIntakeWorkflow", () => {
     expect(result.accepted).toEqual({
       goal: "Run a 10k",
       baseline: "Can run 3km",
-      relativeStartDate: "next week",
-      relativeDueDate: "in 6 weeks",
+      startDate: "next week",
+      dueDate: "in 6 weeks",
       daysWeeklyFrequency: 3,
     });
   });

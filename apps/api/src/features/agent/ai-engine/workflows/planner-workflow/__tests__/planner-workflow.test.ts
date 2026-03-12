@@ -166,8 +166,8 @@ describe("createPlannerWorkflow", () => {
           accepted: {
             goal: "Run a 10k",
             baseline: "Can run 3km",
-            relativeStartDate: "tomorrow",
-            relativeDueDate: "in a month",
+            startDate: "tomorrow",
+            dueDate: "in a month",
             daysWeeklyFrequency: 3,
           },
           waiting: null,
@@ -199,8 +199,8 @@ describe("createPlannerWorkflow", () => {
           accepted: {
             goal: "Run a 10k",
             baseline: "Can run 3km",
-            relativeStartDate: "tomorrow",
-            relativeDueDate: "in a month",
+            startDate: "tomorrow",
+            dueDate: "in a month",
             daysWeeklyFrequency: 3,
           },
           waiting: null,
@@ -253,8 +253,8 @@ describe("createPlannerWorkflow", () => {
           accepted: {
             goal: "Run a marathon",
             baseline: "Never ran before",
-            relativeStartDate: "tomorrow",
-            relativeDueDate: "in one week",
+            startDate: "tomorrow",
+            dueDate: "in one week",
             daysWeeklyFrequency: 7,
           },
           waiting: null,
@@ -378,8 +378,8 @@ describe("createPlannerWorkflow", () => {
       intakeAccepted: {
         goal: "Run a 10k",
         baseline: "Can run 3km",
-        relativeStartDate: "tomorrow",
-        relativeDueDate: "in a month",
+        startDate: "tomorrow",
+        dueDate: "in a month",
         daysWeeklyFrequency: 3,
       },
     });

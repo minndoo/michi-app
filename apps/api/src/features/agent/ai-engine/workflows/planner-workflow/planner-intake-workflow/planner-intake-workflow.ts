@@ -48,10 +48,10 @@ const PlannerIntakeStateAnnotation = Annotation.Root({
   }),
 });
 
-const getUserDefinedFields = (
+const getQuestionAnswerPayload = (
   state: PlannerIntakeWorkflowState,
 ): Partial<Record<PlanIntakeFieldKey, string>> => {
-  const userDefinedFields: Partial<Record<PlanIntakeFieldKey, string>> = {};
+  const payload: Partial<Record<PlanIntakeFieldKey, string>> = {};
 
   for (const questionAnswer of state.questionAnswers ?? []) {
     const trimmedAnswer = questionAnswer.answer.trim();
@@ -60,71 +60,40 @@ const getUserDefinedFields = (
       continue;
     }
 
-    userDefinedFields[questionAnswer.field] = trimmedAnswer;
+    payload[questionAnswer.field] = trimmedAnswer;
   }
 
-  return userDefinedFields;
+  return payload;
 };
 
-const buildPrompt = (state: PlannerIntakeWorkflowState): string => {
-  const missingFields = getMissingFields(state.accepted ?? null);
-  const alreadyAcceptedFields = state.accepted ?? {};
-  const userDefinedFields = getUserDefinedFields(state);
+const getExtractionInput = (state: PlannerIntakeWorkflowState): string => {
+  const payload = getQuestionAnswerPayload(state);
 
-  return `
-Extract planner intake fields.
+  if (Object.keys(payload).length > 0) {
+    return JSON.stringify(payload);
+  }
 
-alreadyAcceptedFields:
-${JSON.stringify(alreadyAcceptedFields, null, 2)}
+  return state.input;
+};
 
-userDefinedFields:
-${JSON.stringify(userDefinedFields, null, 2)}
-
-Missing fields before this turn:
-${JSON.stringify(missingFields)}
-
-latestUserInput:
-${state.input}
-
-Reference date: ${state.referenceDate}
-Timezone: ${state.timezone}
-
-Allowed output fields:
+const buildPrompt = (input: string): string =>
+  `You are a parameter extractor.
+Extract only these fields:
 - goal
 - baseline
 - startDate
-- relativeStartDate
 - dueDate
-- relativeDueDate
 - daysWeeklyFrequency
+Input may be:
+- raw user message
+- JSON object with field values
+startDate and dueDate may be relative values.
+- If you can't extract a value for the field, omit it.
 
-Rules (strict):
-1. Process fields in this order: goal, baseline, startDate/relativeStartDate, dueDate/relativeDueDate, daysWeeklyFrequency.
-2. Never modify alreadyAcceptedFields. Only extract missing fields.
-3. If userDefinedFields has a concrete value for a missing field, extract it first.
-4. Treat userDefinedFields key as field intent.
-5. For date keys: use relativeStartDate/relativeDueDate for relative phrases ("today", "tomorrow", "next week", "in N days", "in N weeks"). Use startDate/dueDate for exact dates like YYYY-MM-DD.
-6. If value is vague ("not sure", "maybe", "sometime soon", "sometimes"), skip that field.
-7. Never set both startDate and relativeStartDate. Never set both dueDate and relativeDueDate.
-8. Return only JSON: { "extracted": { ... } }.
+Input:
+${input}
 
-Examples:
-- Missing fields: ["startDate", "dueDate"]
-- userDefinedFields: { "startDate": "tomorrow", "dueDate": "in 6 weeks" }
-- latestUserInput: "tomorrow and in 6 weeks"
-- Output: { "extracted": { "relativeStartDate": "tomorrow", "relativeDueDate": "in 6 weeks" } }
-
-- Missing fields: ["baseline"]
-- userDefinedFields: { "baseline": "not sure" }
-- latestUserInput: "not sure"
-- Output: { "extracted": {} }
-
-- Missing fields: ["daysWeeklyFrequency"]
-- userDefinedFields: { "daysWeeklyFrequency": "3 days per week" }
-- latestUserInput: "3 days"
-- Output: { "extracted": { "daysWeeklyFrequency": 3 } }
-`;
-};
+Return only JSON for the structured output schema.`;
 
 const getMissingFields = (
   accepted: PlanIntakeAcceptedDraft | null,
@@ -139,11 +108,11 @@ const getMissingFields = (
     missingFields.push("baseline");
   }
 
-  if (!accepted?.startDate?.trim() && !accepted?.relativeStartDate?.trim()) {
+  if (!accepted?.startDate?.trim()) {
     missingFields.push("startDate");
   }
 
-  if (!accepted?.dueDate?.trim() && !accepted?.relativeDueDate?.trim()) {
+  if (!accepted?.dueDate?.trim()) {
     missingFields.push("dueDate");
   }
 
@@ -217,95 +186,18 @@ const getQuestionForField = (
   }
 };
 
-const hasCanonicalFieldValue = (
-  draft: PlanIntakeAcceptedDraft,
-  field: PlanIntakeFieldKey,
-): boolean => {
-  if (field === "startDate") {
-    return Boolean(draft.startDate?.trim() || draft.relativeStartDate?.trim());
-  }
-
-  if (field === "dueDate") {
-    return Boolean(draft.dueDate?.trim() || draft.relativeDueDate?.trim());
-  }
-
-  const value = draft[field];
-  return typeof value === "string"
-    ? value.trim().length > 0
-    : typeof value === "number";
-};
-
-const applyExtractedField = (
-  draft: PlanIntakeAcceptedDraft,
-  field: keyof PlanIntakeAcceptedDraft,
-  value: PlanIntakeAcceptedDraft[keyof PlanIntakeAcceptedDraft],
-): void => {
-  if (value == null || value === "") {
-    return;
-  }
-
-  const canonicalField =
-    field === "relativeStartDate"
-      ? "startDate"
-      : field === "relativeDueDate"
-        ? "dueDate"
-        : (field as PlanIntakeFieldKey);
-
-  if (hasCanonicalFieldValue(draft, canonicalField)) {
-    return;
-  }
-
-  if (field === "startDate") {
-    delete draft.relativeStartDate;
-    draft.startDate = value as string;
-    return;
-  }
-
-  if (field === "relativeStartDate") {
-    delete draft.startDate;
-    draft.relativeStartDate = value as string;
-    return;
-  }
-
-  if (field === "dueDate") {
-    delete draft.relativeDueDate;
-    draft.dueDate = value as string;
-    return;
-  }
-
-  if (field === "relativeDueDate") {
-    delete draft.dueDate;
-    draft.relativeDueDate = value as string;
-    return;
-  }
-
-  if (field === "daysWeeklyFrequency") {
-    draft.daysWeeklyFrequency = value as number;
-    return;
-  }
-
-  draft[field] = value as never;
-};
-
 const llmCallPlannerIntake = async (
   state: PlannerIntakeWorkflowState,
   model: BaseChatModel,
 ): Promise<Partial<PlannerIntakeWorkflowState>> => {
   const structuredModel = model.withStructuredOutput(intakeExtractionSchema);
-  const response = await structuredModel.invoke(buildPrompt(state));
+  const response = await structuredModel.invoke(
+    buildPrompt(getExtractionInput(state)),
+  );
   const nextAccepted: PlanIntakeAcceptedDraft = {
+    ...response.extracted,
     ...(state.accepted ?? {}),
   };
-  const extractedEntries = Object.entries(response.extracted) as Array<
-    [
-      keyof PlanIntakeAcceptedDraft,
-      PlanIntakeAcceptedDraft[keyof PlanIntakeAcceptedDraft],
-    ]
-  >;
-
-  for (const [field, value] of extractedEntries) {
-    applyExtractedField(nextAccepted, field, value);
-  }
 
   // TODO(AI Engine): Add error handling and retries for LLM calls.
   const missingFields = getMissingFields(nextAccepted);
