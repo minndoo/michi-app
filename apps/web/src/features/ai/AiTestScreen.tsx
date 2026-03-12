@@ -18,7 +18,6 @@ import {
   buildLockedPlannerQuestionAnswers,
   buildPlannerContinuationMessage,
   getPlannerQuestionKey,
-  hasAllPlannerAnswersLocked,
   type PlannerQuestion,
 } from "./AiTestScreen.helpers";
 
@@ -106,98 +105,46 @@ export const AiTestScreen = () => {
   const [activePlannerQuestions, setActivePlannerQuestions] = useState<
     PlannerQuestion[]
   >([]);
-  const [draftAnswersByKey, setDraftAnswersByKey] = useState<
+  const [plannerAnswersByKey, setPlannerAnswersByKey] = useState<
     Record<string, string>
   >({});
-  const [lockedAnswersByKey, setLockedAnswersByKey] = useState<
-    Record<string, string>
-  >({});
+  const [activePlannerQuestionIndex, setActivePlannerQuestionIndex] =
+    useState(0);
 
   const applyPlannerQuestions = (questions: PlannerQuestion[]) => {
-    const keys = new Set(
-      questions.map((question) => getPlannerQuestionKey(question)),
-    );
-
     setActivePlannerQuestions(questions);
-    setDraftAnswersByKey((current) => {
-      const next: Record<string, string> = {};
-
-      for (const key of keys) {
-        next[key] = current[key] ?? "";
-      }
-
-      return next;
-    });
-    setLockedAnswersByKey((current) => {
-      const next: Record<string, string> = {};
-
-      for (const key of keys) {
-        const value = current[key];
-
-        if (value) {
-          next[key] = value;
-        }
-      }
-
-      return next;
-    });
+    setPlannerAnswersByKey({});
+    setActivePlannerQuestionIndex(0);
+    setMessage("");
   };
 
   const clearPlannerQuestions = () => {
     setActivePlannerQuestions([]);
-    setDraftAnswersByKey({});
-    setLockedAnswersByKey({});
-  };
-
-  const handleLockAnswer = (question: PlannerQuestion) => {
-    const key = getPlannerQuestionKey(question);
-    const draftValue = (draftAnswersByKey[key] ?? "").trim();
-
-    if (!draftValue || lockedAnswersByKey[key]) {
-      return;
-    }
-
-    setLockedAnswersByKey((current) => ({
-      ...current,
-      [key]: draftValue,
-    }));
-  };
-
-  const handleAnswerChange = (question: PlannerQuestion, value: string) => {
-    const key = getPlannerQuestionKey(question);
-
-    if (lockedAnswersByKey[key]) {
-      return;
-    }
-
-    setDraftAnswersByKey((current) => ({
-      ...current,
-      [key]: value,
-    }));
+    setPlannerAnswersByKey({});
+    setActivePlannerQuestionIndex(0);
   };
 
   const hasActivePlannerQuestions = activePlannerQuestions.length > 0;
-  const areAllPlannerAnswersLocked = hasAllPlannerAnswersLocked({
-    lockedAnswersByKey,
-    questions: activePlannerQuestions,
-  });
+  const currentPlannerQuestion = hasActivePlannerQuestions
+    ? (activePlannerQuestions[
+        Math.min(activePlannerQuestionIndex, activePlannerQuestions.length - 1)
+      ] ?? null)
+    : null;
+  const isOnLastPlannerQuestion =
+    hasActivePlannerQuestions &&
+    activePlannerQuestionIndex >= activePlannerQuestions.length - 1;
 
   const handleStreamEvent = (event: AgentStreamEvent) => {
+    console.log("event", event);
     if (
       event.type === "run_started" ||
       event.type === "router_started" ||
       event.type === "router_intent_resolved" ||
       event.type === "planner_started" ||
       event.type === "planner_stage" ||
-      event.type === "planner_waiting" ||
       event.type === "planner_completed"
     ) {
       const text = createStreamText(event);
-
-      if (event.type === "planner_waiting") {
-        applyPlannerQuestions(event.questions);
-        setPendingMode("plan_goal");
-      }
 
       if (!text) {
         return;
@@ -215,21 +162,29 @@ export const AiTestScreen = () => {
       return;
     }
 
+    if (event.type === "planner_waiting") {
+      applyPlannerQuestions(event.questions);
+      setPendingMode("plan_goal");
+      return;
+    }
+
     if (event.type === "result") {
       setLastResult(event.response);
       const nextQuestions = event.response.plannerQuestions ?? [];
       applyPlannerQuestions(nextQuestions);
       setPendingMode(nextQuestions.length > 0 ? "plan_goal" : "message");
-      setMessages((current) => [
-        ...current,
-        {
-          id: createMessageId(),
-          role: "assistant",
-          kind: "result",
-          text: event.response.response,
-          response: event.response,
-        },
-      ]);
+      if (nextQuestions.length === 0) {
+        setMessages((current) => [
+          ...current,
+          {
+            id: createMessageId(),
+            role: "assistant",
+            kind: "result",
+            text: event.response.response,
+            response: event.response,
+          },
+        ]);
+      }
       setErrorMessage(null);
       return;
     }
@@ -255,14 +210,35 @@ export const AiTestScreen = () => {
 
     let nextMessage = message.trim();
     let questionAnswers: AgentMessageInput["questionAnswers"] | undefined;
+    let isPlannerAnswerModeSubmit = false;
 
     if (hasActivePlannerQuestions) {
-      if (!areAllPlannerAnswersLocked) {
+      if (!currentPlannerQuestion) {
         return;
       }
 
+      const currentAnswer = message.trim();
+
+      if (!currentAnswer) {
+        return;
+      }
+
+      const currentKey = getPlannerQuestionKey(currentPlannerQuestion);
+      const nextAnswersByKey = {
+        ...plannerAnswersByKey,
+        [currentKey]: currentAnswer,
+      };
+
+      if (!isOnLastPlannerQuestion) {
+        setPlannerAnswersByKey(nextAnswersByKey);
+        setActivePlannerQuestionIndex((current) => current + 1);
+        setMessage("");
+        return;
+      }
+
+      isPlannerAnswerModeSubmit = true;
       questionAnswers = buildLockedPlannerQuestionAnswers({
-        lockedAnswersByKey,
+        lockedAnswersByKey: nextAnswersByKey,
         questions: activePlannerQuestions,
       });
       nextMessage = buildPlannerContinuationMessage(questionAnswers);
@@ -284,15 +260,17 @@ export const AiTestScreen = () => {
 
     setMessage("");
     setErrorMessage(null);
-    setMessages((current) => [
-      ...current,
-      {
-        id: createMessageId(),
-        role: "user",
-        kind: "text",
-        text: nextMessage,
-      },
-    ]);
+    if (!isPlannerAnswerModeSubmit) {
+      setMessages((current) => [
+        ...current,
+        {
+          id: createMessageId(),
+          role: "user",
+          kind: "text",
+          text: nextMessage,
+        },
+      ]);
+    }
     setIsStreaming(true);
     let queuedJobId: string | null = null;
 
@@ -363,11 +341,7 @@ export const AiTestScreen = () => {
       ? "Missing details"
       : "Clarifications";
 
-  const isSubmitDisabled = isStreaming
-    ? true
-    : hasActivePlannerQuestions
-      ? !areAllPlannerAnswersLocked
-      : message.trim().length === 0;
+  const isSubmitDisabled = isStreaming || message.trim().length === 0;
 
   return (
     <YStack gap="$4" width="100%" maxW="$screen.md" py="$4">
@@ -482,7 +456,7 @@ export const AiTestScreen = () => {
           </Text>
         ) : null}
 
-        {hasActivePlannerQuestions ? (
+        {hasActivePlannerQuestions && currentPlannerQuestion ? (
           <YStack
             gap="$2"
             p="$3"
@@ -492,72 +466,50 @@ export const AiTestScreen = () => {
             bg="$background"
           >
             <Text color="$color10">{waitingLabel}</Text>
-            {activePlannerQuestions.map((question) => {
-              const key = getPlannerQuestionKey(question);
-              const draftValue = draftAnswersByKey[key] ?? "";
-              const lockedValue = lockedAnswersByKey[key] ?? "";
-              const isLocked = lockedValue.trim().length > 0;
-
-              return (
-                <YStack
-                  key={key}
-                  gap="$2"
-                  p="$2"
-                  rounded="$3"
-                  borderWidth={1}
-                  borderColor="$borderColor"
-                  bg="$backgroundPress"
-                >
-                  <Text color="$color12">{question.question.question}</Text>
-                  <TextArea
-                    placeholder={question.placeholder}
-                    value={draftValue}
-                    onChangeText={(value) =>
-                      handleAnswerChange(question, value)
-                    }
-                    disabled={isLocked || isStreaming}
-                    height={80}
-                  />
-                  <XStack justifyContent="space-between" alignItems="center">
-                    <Button
-                      onPress={() => handleLockAnswer(question)}
-                      disabled={
-                        isStreaming ||
-                        isLocked ||
-                        draftValue.trim().length === 0
-                      }
-                    >
-                      <Text color="inherit">
-                        {isLocked ? "Locked" : "Lock"}
-                      </Text>
-                    </Button>
-                    {isLocked ? (
-                      <Text color="$color10">Locked: {lockedValue}</Text>
-                    ) : (
-                      <Text color="$color10">Not locked</Text>
-                    )}
-                  </XStack>
-                </YStack>
-              );
-            })}
+            <Text color="$color10">
+              Question {activePlannerQuestionIndex + 1} of{" "}
+              {activePlannerQuestions.length}
+            </Text>
+            <YStack
+              gap="$2"
+              p="$2"
+              rounded="$3"
+              borderWidth={1}
+              borderColor="$borderColor"
+              bg="$backgroundPress"
+            >
+              <Text color="$color12">
+                {currentPlannerQuestion.question.question}
+              </Text>
+              {currentPlannerQuestion.placeholder ? (
+                <Text color="$color10">
+                  {currentPlannerQuestion.placeholder}
+                </Text>
+              ) : null}
+            </YStack>
           </YStack>
-        ) : (
-          <TextArea
-            placeholder="Describe what you want help planning"
-            value={message}
-            onChangeText={setMessage}
-            height={120}
-          />
-        )}
+        ) : null}
+
+        <TextArea
+          placeholder={
+            hasActivePlannerQuestions
+              ? currentPlannerQuestion?.placeholder || "Type your answer"
+              : "Describe what you want help planning"
+          }
+          value={message}
+          onChangeText={setMessage}
+          disabled={isStreaming}
+          height={120}
+        />
 
         <Button onPress={handleMessageSubmit} disabled={isSubmitDisabled}>
           <Text color="inherit">
             {isStreaming
               ? "Streaming..."
               : hasActivePlannerQuestions
-                ? areAllPlannerAnswersLocked
+                ? isOnLastPlannerQuestion
                   ? "Continue plan"
-                  : "Lock all answers to continue"
+                  : "Save answer"
                 : "Send message"}
           </Text>
         </Button>
